@@ -1,0 +1,88 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "anthropic/claude-sonnet-5-5",
+  "small_model": "google/gemini-3.8-flash",
+  "default_agent": "tech-lead",
+  "subagent_depth": 2,
+  "autoupdate": "notify",
+  "share": "disabled",
+  "compaction": {
+    "auto": true,
+    "prune": true
+  },
+  "agent": {
+    "lead": {
+      "model": "anthropic/claude-opus-5-5",
+      "variant": "high"
+    },
+    "tech-lead": {
+      "model": "anthropic/claude-sonnet-5-5"
+    },
+    "reviewer": {
+      "model": "anthropic/claude-sonnet-5-5"
+    },
+    "developer": {
+      "model": "google/gemini-3.8-flash",
+      "variant": "high"
+    },
+    "developer-strong": {
+      "model": "anthropic/claude-sonnet-5-5"
+    },
+    "explore": {
+      "model": "google/gemini-3.8-flash"
+    },
+    "general": {
+      "model": "google/gemini-3.8-flash"
+    },
+    "compaction": {
+      "model": "google/gemini-3.8-flash"
+    },
+    "title": {
+      "model": "google/gemini-3.8-flash"
+    },
+    "summary": {
+      "model": "google/gemini-3.8-flash"
+    },
+    "build": {
+      "disable": true
+    },
+    "plan": {
+      "disable": true
+    }
+  },
+  "permission": {
+    "read": {
+      "*": "allow",
+      "*.env": "deny",
+      "*.env.*": "deny",
+      "*.env.example": "allow",
+      "*.pem": "deny",
+      "*id_rsa*": "deny"
+    },
+    "external_directory": {
+      "*": "ask",
+      "~/.config/opencode/**": "allow",
+      "*/.config/opencode/**": "allow"
+    },
+    "bash": {
+      "*": "ask",
+      "git status*": "allow",
+      "git diff*": "allow",
+      "git log*": "allow",
+      "git show*": "allow",
+      "ls*": "allow",
+      "pwd": "allow",
+      "scripts/check.sh*": "allow",
+      "./scripts/check.sh*": "allow",
+      "scripts/board.sh*": "allow",
+      "./scripts/board.sh*": "allow",
+      "git push*": "deny",
+      "git reset --hard*": "deny",
+      "git clean*": "deny",
+      "rm -rf*": "deny",
+      "sudo*": "deny",
+      "curl*": "ask",
+      "wget*": "ask"
+    }
+  }
+}

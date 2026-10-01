@@ -1,0 +1,28 @@
+name: ci
+on:
+  push:
+  pull_request:
+jobs:
+  kit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pyyaml
+      - name: shell syntax
+        run: |
+          bash -n setup.command
+          bash -n global/team/bootstrap.sh
+          for f in global/team/project-template/scripts/*.sh; do bash -n "$f"; done
+      - name: agent, command and skill frontmatter
+        run: python3 tests/validate_frontmatter.py
+      - name: global-v2 is generated from global
+        run: |
+          python3 tools/gen_v2.py
+          git diff --exit-code -- global-v2
+      - name: board.sh verify negative tests
+        run: bash tests/board/run.sh
+      - name: loop-contract gate runs
+        run: python3 global/skills/loop-contract/scripts/fold_ledger.py --help

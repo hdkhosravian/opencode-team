@@ -1,0 +1,10 @@
+# One command per line. scripts/check.sh runs them in order and fails if any fails.
+# The tech-lead maintains this file (/team-init fills it). Developers cannot edit it.
+# Must include a line that runs tests/acceptance explicitly, plus lint, typecheck, unit tests,
+# and an import-boundary check when the stack has one (dependency-cruiser, import-linter, packwerk...).
+#
+# Examples:
+#   npm run lint
+#   npx tsc --noEmit
+#   npx vitest run tests/unit
+#   npx vitest run tests/acceptance
