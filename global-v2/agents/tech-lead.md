@@ -188,6 +188,9 @@ permissions:
   resource: npm run test *
   effect: allow
 - action: shell
+  resource: npm run test:*
+  effect: allow
+- action: shell
   resource: npx vitest
   effect: allow
 - action: shell

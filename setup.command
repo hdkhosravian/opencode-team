@@ -20,6 +20,12 @@ hdr()  { echo; echo "== $*"; }
 finish() { echo; echo "$1"; echo; read -r -p "Press Enter to close" _ || true; exit "${2:-0}"; }
 # run a command with a time limit (macOS has no `timeout`; perl is always there)
 tlimit() { local s="$1"; shift; perl -e 'alarm shift; exec @ARGV' "$s" "$@"; }
+# a real python3 (not the macOS stub that opens the Xcode installer), 3.8 or newer
+have_python() {
+  command -v python3 >/dev/null 2>&1 || return 1
+  if [ "$(command -v python3)" = "/usr/bin/python3" ] && ! xcode-select -p >/dev/null 2>&1; then return 1; fi
+  python3 -c 'import sys; sys.exit(sys.version_info < (3, 8))' 2>/dev/null
+}
 major() { opencode --version 2>/dev/null | tail -1 | sed -E 's/^[^0-9]*([0-9]+).*/\1/'; }
 
 echo "OpenCode team setup — $(date)"
@@ -74,8 +80,20 @@ if [ -e "$CFG" ]; then
   [ -e "$CFG/AGENTS.md" ] && warn "your own global AGENTS.md was replaced by the team rules; your version is in $BK/AGENTS.md (merge any lines you still want)"
 fi
 mkdir -p "$CFG/agents" "$CFG/commands"
-install_v1() { cp -R "$KIT/global/." "$CFG/"; }
-install_v2() { install_v1; cp -R "$KIT/global-v2/." "$CFG/"; }
+# models.conf in the kit is the single place that says which model each agent uses
+apply_models() {
+  if [ -f "$CFG/team/models.conf" ] && ! cmp -s "$KIT/models.conf" "$CFG/team/models.conf"; then
+    echo "  INFO  the installed models differ from $KIT/models.conf; the kit's file wins (your old one is in the backup)"
+  fi
+  cp "$KIT/models.conf" "$CFG/team/models.conf"
+  if have_python; then
+    python3 "$CFG/team/models.py" apply --dir "$CFG" --quiet 2>&1 | sed 's/^/  /'
+  elif ! git -C "$KIT" diff --quiet -- models.conf 2>/dev/null; then
+    warn "you changed models.conf but python3 is missing, so it was not applied (the default models are installed). Install python3 (xcode-select --install) and run this again."
+  fi
+}
+install_v1() { cp -R "$KIT/global/." "$CFG/"; apply_models; }
+install_v2() { cp -R "$KIT/global/." "$CFG/"; cp -R "$KIT/global-v2/." "$CFG/"; apply_models; }
 if [ "$MAJ" = "2" ]; then
   install_v2 && ok "installed team config in V2 format (agents, permissions list, commands) plus skills and AGENTS.md"
   CFGKIND=v2
@@ -83,18 +101,24 @@ else
   install_v1 && ok "installed team config in V1 format plus skills and AGENTS.md"
   CFGKIND=v1
 fi
-chmod +x "$CFG/team/bootstrap.sh" "$CFG/team/project-template/scripts/check.sh"
+if have_python; then
+  ok "models: $(python3 "$CFG/team/models.py" show | awk '/^(LEAD|TECH_LEAD|REVIEWER|DEVELOPER|DEVELOPER_STRONG|BACKGROUND) /{printf "%s=%s ", tolower($1), $2}')"
+  python3 "$CFG/team/models.py" show | sed -n 's/^WARN  /  INFO  /p'
+fi
+chmod +x "$CFG/team/bootstrap.sh" "$CFG/team/project-template/scripts/check.sh" "$CFG/team/project-template/scripts/board.sh" "$CFG/team/models.py"
 
 # 3) Model IDs -----------------------------------------------------------------------
 hdr "3. Model IDs"
 MJ="${TMPDIR:-/tmp}/opencode-models-$$.json"
 if curl -fsSL --max-time 30 https://models.dev/api.json -o "$MJ" 2>/dev/null; then
-  MODELS_OUT="$(/usr/bin/osascript -l JavaScript - "$MJ" 2>&1 <<'JXA'
+  MODEL_IDS="$(sed -n 's/^[A-Z_]*=//p' "$KIT/models.conf" | sed 's/#.*//' | sort -u | tr '\n' ' ')"
+  # shellcheck disable=SC2086
+  MODELS_OUT="$(/usr/bin/osascript -l JavaScript - "$MJ" $MODEL_IDS 2>&1 <<'JXA'
 ObjC.import('Foundation');
 function run(argv){
   var s=$.NSString.stringWithContentsOfFileEncodingError(argv[0],$.NSUTF8StringEncoding,null);
   var d=JSON.parse(ObjC.unwrap(s));
-  var want=[["anthropic","claude-opus-5-5"],["anthropic","claude-sonnet-5-5"],["google","gemini-3.8-flash"]];
+  var want=argv.slice(1).map(function(id){var i=id.indexOf("/"); return [id.slice(0,i), id.slice(i+1)];});
   var out=[];
   want.forEach(function(w){
     var p=d[w[0]], ok=p&&p.models&&p.models[w[1]];
@@ -139,45 +163,68 @@ if [ "$MAJ" = "2" ]; then
       head -c 1500 "$TMP/config1.out" | sed 's/^/        /'
     fi
   fi
-  if tlimit 30 opencode debug agents > "$TMP/agents.out" 2>&1; then
-    for a in lead tech-lead developer developer-strong reviewer explore; do
-      grep -qE "(^|[^a-z-])$a([^a-z-]|$)" "$TMP/agents.out" && echo "  OK    agent $a is registered" || echo "  WARN  agent $a is not in 'opencode debug agents'"
-    done
-    for a in build plan; do
-      grep -qE "(^|[^a-z-])$a([^a-z-]|$)" "$TMP/agents.out" && echo "  INFO  built-in agent $a still listed (the config disables it; check it is hidden in the TUI)"
-    done
+  # a cold 2.x service answers with an empty list until its provider catalog has loaded: retry
+  for _try in 1 2 3 4; do
+    tlimit 30 opencode debug agents > "$TMP/agents.out" 2>&1 && grep -q '"id"' "$TMP/agents.out" && break
+    sleep 3
+  done
+  if grep -q '"id"' "$TMP/agents.out"; then
+    if have_python; then
+      python3 "$CFG/team/models.py" verify "$TMP/agents.out" > "$TMP/verify.out" 2>&1
+      cat "$TMP/verify.out"
+      grep -q FAIL "$TMP/verify.out" && WARN=1
+    else
+      for a in lead tech-lead developer developer-strong reviewer explore reporter; do
+        grep -q "\"id\": \"$a\"" "$TMP/agents.out" && echo "  OK    agent $a is registered" || { warn "agent $a is not in 'opencode debug agents'"; WARN=1; }
+      done
+    fi
   else
     echo "  INFO  'opencode debug agents' failed; agents will be checked on first run"
   fi
+  if have_python && [ -f "$KIT/tests/perm_check.py" ] && [ -s "$TMP/agents.out" ]; then
+    python3 "$KIT/tests/perm_check.py" "$TMP/agents.out" > "$TMP/perm.out" 2>&1
+    sed 's/^/  /' "$TMP/perm.out" | head -25
+    grep -q FAIL "$TMP/perm.out" && WARN=1
+  else
+    echo "  INFO  permission spot checks skipped (need python3 and the kit's tests/ folder)"
+  fi
   echo "  -- V2 diagnostics (for troubleshooting, read by Claude from setup.log) --"
-  ( head -60 "$TMP/agents.out" ) | sed 's/^/     /'
-  ( tlimit 30 opencode debug config 2>&1 | head -40 ) | sed 's/^/     /'
+  grep -E '"(id|providerID|variant)"' "$TMP/agents.out" | head -40 | sed 's/^/     /'
+  ( tlimit 30 opencode debug config 2>&1 | grep -E '"(type|path)"' | head -10 ) | sed 's/^/     /'
 else
-  tlimit 30 opencode debug config >/dev/null 2>&1 && echo "  OK    config resolves" || echo "  WARN  config does not resolve (run: opencode debug config)"
-  for a in lead tech-lead developer developer-strong reviewer explore; do
-    if tlimit 30 opencode debug agent "$a" > "$TMP/$a.json" 2>&1; then
-      m="$(grep -o '"modelID": *"[^"]*"' "$TMP/$a.json" | head -1 | cut -d'"' -f4)"
-      v="$(grep -o '"variant": *"[^"]*"' "$TMP/$a.json" | head -1 | cut -d'"' -f4)"
+  tlimit 30 opencode debug config >/dev/null 2>&1 && echo "  OK    config resolves" || warn "config does not resolve (run: opencode debug config)"
+  mkdir -p "$TMP/agents1"
+  for a in lead tech-lead developer developer-strong reviewer explore reporter; do
+    if tlimit 30 opencode debug agent "$a" > "$TMP/agents1/$a.json" 2>&1; then
+      m="$(grep -o '"modelID": *"[^"]*"' "$TMP/agents1/$a.json" | head -1 | cut -d'"' -f4)"
+      v="$(grep -o '"variant": *"[^"]*"' "$TMP/agents1/$a.json" | head -1 | cut -d'"' -f4)"
       echo "  OK    agent $a -> ${m:-default}${v:+ (variant $v)}"
     else
-      echo "  WARN  agent $a does not resolve (run: opencode debug agent $a)"
+      warn "agent $a does not resolve (run: opencode debug agent $a)"
     fi
   done
+  if have_python && [ -f "$KIT/tests/perm_check.py" ]; then
+    python3 "$KIT/tests/perm_check.py" --v1 "$TMP/agents1" > "$TMP/perm.out" 2>&1
+    sed 's/^/  /' "$TMP/perm.out" | head -25
+    grep -q FAIL "$TMP/perm.out" && WARN=1
+  else
+    echo "  INFO  permission spot checks skipped (need python3 and the kit's tests/ folder)"
+  fi
   tlimit 30 opencode debug skill > "$TMP/skills.json" 2>/dev/null   # to a file: a pipe truncates long output at 64 KB
   n="$(grep -oE '"name": *"(product-brief|domain-modeling|architecture-decision|epic-planning|task-card|acceptance-tests|tdd-cycle|clean-code|design-principles|code-review|debug-rootcause|escalation-brief|refactor-safely|loop-contract)"' "$TMP/skills.json" | sort -u | wc -l | tr -d ' ')"
-  [ "$n" = "14" ] && echo "  OK    skills: 14 of 14" || echo "  WARN  skills: $n of 14"
+  [ "$n" = "14" ] && echo "  OK    skills: 14 of 14" || warn "skills: $n of 14"
 fi
 # the project-side pieces do not depend on the OpenCode version
 (
   cd "$TMP" && git init -q && echo '{"name":"smoke","scripts":{"test":"echo 1 passed"}}' > package.json
   "$CFG/team/bootstrap.sh" | tail -1 | sed 's/^/  /'
   echo true > .opencode/check.cmds
-  scripts/check.sh >/dev/null 2>&1 && echo "  OK    check.sh runs" || echo "  WARN  check.sh failed on the smoke project"
-  scripts/board.sh verify >/dev/null 2>&1 && [ "$(scripts/board.sh next-id)" = "001" ] && echo "  OK    board.sh runs" || echo "  WARN  board.sh failed on the smoke project"
+  scripts/check.sh >/dev/null 2>&1 && echo "  OK    check.sh runs" || warn "check.sh failed on the smoke project"
+  scripts/board.sh verify >/dev/null 2>&1 && [ "$(scripts/board.sh next-id)" = "001" ] && echo "  OK    board.sh runs" || warn "board.sh failed on the smoke project"
   GATE="$CFG/skills/loop-contract/scripts/fold_ledger.py"
-  if [ "$(command -v python3)" = "/usr/bin/python3" ] && ! xcode-select -p >/dev/null 2>&1; then echo "  WARN  python3 is only the macOS stub (no developer tools installed): the loop-contract gate (large batch jobs only) will not run; normal cards are unaffected"
+  if [ "$(command -v python3)" = "/usr/bin/python3" ] && ! xcode-select -p >/dev/null 2>&1; then warn "python3 is only the macOS stub (no developer tools installed): the loop-contract gate (large batch jobs only) will not run; normal cards are unaffected"
   elif command -v python3 >/dev/null 2>&1 && tlimit 20 python3 "$GATE" --help >/dev/null 2>&1; then echo "  OK    loop-contract gate runs (python3 $(python3 -c 'import sys;print("%d.%d"%sys.version_info[:2])' 2>/dev/null))"
-  else echo "  WARN  python3 missing or too old: the loop-contract gate (large batch jobs only) will not run; normal cards are unaffected"; fi
+  else warn "python3 missing or too old: the loop-contract gate (large batch jobs only) will not run; normal cards are unaffected"; fi
 ) > "$TMP/project.out" 2>&1
 cat "$TMP/project.out"
 grep -q WARN "$TMP/project.out" && WARN=1
@@ -192,5 +239,7 @@ hdr "5. Providers (connect Anthropic and Google with /connect inside opencode)"
 tlimit 20 opencode auth list 2>/dev/null | sed 's/^/  /' | head -15 || true
 
 echo
+echo "Models: edit $KIT/models.conf and run this script again, or change one role at once:"
+echo "  python3 ~/.config/opencode/team/models.py set developer google/gemini-3.8-flash#high   (show | check also work)"
 echo "Last step (yours): open a NEW terminal tab, cd into a project folder (a git repo), run  opencode , type  /connect  for Anthropic and Google, then  /team-init ."
 if [ "$WARN" -eq 0 ]; then finish "SETUP RESULT: OK"; else finish "SETUP RESULT: DONE WITH WARNINGS (see WARN lines above)"; fi

@@ -28,6 +28,9 @@
     "compaction": {
       "model": "google/gemini-3.8-flash"
     },
+    "summary": {
+      "model": "google/gemini-3.8-flash"
+    },
     "build": {
       "disabled": true
     },

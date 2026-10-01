@@ -41,7 +41,8 @@ flowchart TD
 | `developer` | Gemini 3.8 Flash, high | Implements one card with red-green-refactor | Touch acceptance tests, docs, gate config, card headers |
 | `developer-strong` | Sonnet 5.5 | Same job for T2 (risky) cards or cards Gemini couldn't do | Same locks as `developer` |
 | `reviewer` | Sonnet 5.5 | Read-only review of one change or one finished epic, evidence only | Edit anything |
-| `explore`, `general`, `title`, `compaction` | Gemini | Cheap background work | |
+| `reporter` | background model | Read-only `/status`: runs `board.sh`, reads `PROGRESS.md` | Edit anything |
+| `explore`, `general`, `title`, `compaction` | background model | Cheap background work | |
 
 Engineering principles (SOLID, DDD, design patterns, Clean Code, TDD, hexagonal architecture) live in 14 small skills that load only when an agent needs them. Each agent sees only its own skills, so the skill list in the prompt stays short. See [docs/architecture.md](docs/architecture.md).
 
@@ -122,6 +123,24 @@ EPIC-01 orders  slices 1/3  cards 2/6
 
 If the tech lead is unsure between two lanes it takes the lower one and lets a failed check or review move the work up.
 
+## Change the models
+
+Every model is one line in [`models.conf`](models.conf), in six roles (`LEAD`, `TECH_LEAD`, `REVIEWER`, `DEVELOPER`, `DEVELOPER_STRONG`, `BACKGROUND`):
+
+```
+DEVELOPER=google/gemini-3.8-flash#high      # provider/model#reasoning-level
+```
+
+Edit the file and run `bash setup.command` again, or change one role on the installed config:
+
+```bash
+python3 ~/.config/opencode/team/models.py set developer openai/gpt-5.4-nano
+python3 ~/.config/opencode/team/models.py show     # roles, models, warnings
+python3 ~/.config/opencode/team/models.py check    # verify IDs against models.dev
+```
+
+It works for OpenCode 1.x and 2.x. Each provider needs `/connect`. It warns when the reviewer and a developer share a provider (a reviewer from the same family shares the author's blind spots). Details in [docs/customizing.md](docs/customizing.md).
+
 ## Commands
 
 | Command | Agent | Does |
@@ -131,7 +150,7 @@ If the tech lead is unsure between two lanes it takes the lower one and lets a f
 | `/epic <epic path>` | tech-lead | Delivers the **next slice** of an epic; run again to continue |
 | `/task <description or card path>` | tech-lead | One feature or fix through the pipeline |
 | `/review` | reviewer | Review current changes |
-| `/status` | general (Gemini) | Board and `PROGRESS.md` summary, no Claude tokens |
+| `/status` | reporter (background model) | Board and `PROGRESS.md` summary, read-only, no Claude tokens |
 
 `Tab` switches between `lead` and `tech-lead`. After any pause, tell the tech lead to continue: it reads the board and resumes from the unfinished card.
 
@@ -171,9 +190,9 @@ Developers can't edit acceptance tests, docs, `.opencode/`, `.github/`, the gate
 
 ## What has and hasn't been tested
 
-Tested on the real OpenCode 1.18.33 binary: all agents resolve with the right model and variant, all 14 skills are found, and 80 permission checks match the design. `board.sh verify` is exercised by 21 cases (CI runs them, see `tests/board/run.sh`) on three awk implementations, including macOS's. `setup.command` was run end to end on a Mac with OpenCode 2.0.20.
+Tested against the **real OpenCode 1.18.34 and 2.0.21** (installed by `setup.command` in a scratch HOME, config in both formats): the config resolves, all agents get the model and variant from `models.conf` (also after changing them with `models.py set`, including another provider), 170 permission cases per format pass on the rules OpenCode computed (`tests/perm_check.py`, run by `setup.command` on every install), and a live run with a free model showed the tech lead running `scripts/board.sh` and the lead refused unlisted commands. Also tested here (CI, and on macOS): `models.py` unit tests, the board verify cases (GNU and BSD `sed`), and frontmatter plus cross references. Earlier tested on the real OpenCode 1.18.33 binary: all agents resolve with the right model and variant, all 14 skills are found, and 80 permission checks match the design. `board.sh verify` is exercised by 22 cases (CI runs them, see `tests/board/run.sh`) on three awk implementations, including macOS's. `setup.command` was run end to end on a Mac with OpenCode 2.0.20.
 
-**Not tested:** the V2 permission semantics against a V2 binary from outside a Mac (equivalence with V1 was checked on samples, and setup falls back to the V1 format if V2 rejects the config), and live runs with real models. Treat the prompts as a first version and tighten them after a few real tasks. Issues and PRs are welcome.
+**Not tested:** live runs with the real Opus, Sonnet and Gemini models (no API keys here), so prompt quality is unproven; the `/status` command end to end (it runs on the background model, which needs its provider connected); and OpenCode on Linux or Windows (the installer targets macOS). Treat the prompts as a first version and tighten them after a few real tasks. Issues and PRs are welcome.
 
 ## Documentation
 

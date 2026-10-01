@@ -6,6 +6,7 @@
 |---|---|---|
 | `developer`, `developer-strong` | `tests/acceptance/`, `tests/blocked/`, `docs/` (and any `*/docs/**`), `AGENTS.md`, `CLAUDE.md`, `PROGRESS.md`, `.opencode/` (cards, loop state, `check.cmds`), `.github/`, `opencode.json(c)`, anything under `~/.config/opencode`, `scripts/check.sh`, `scripts/board.sh` | The one who writes code must not decide what "done" means |
 | `reviewer` | Anything | Read-only |
+| `reporter` (`/status`) | Anything; runs only `scripts/board.sh` | Status must never change state |
 | `lead` | Code, cards | Plans only: edits `docs/product|domain|adr`, `docs/invariants.md`, epics, `PROGRESS.md` |
 | `tech-lead` | Production code | Writes cards, acceptance tests, `check.cmds`, state; developers write code |
 
@@ -25,6 +26,7 @@ OpenCode evaluates permission rules in order and the **last matching rule wins**
 - `tech-lead`: the same read commands plus `git add`, `git commit`, `git switch`, `git mv tests/*`, `scripts/board.sh`, `scripts/check.sh`, test runners, and two pinned commands: `fold_ledger.py` from the installed skill, and `bash ~/.config/opencode/team/bootstrap.sh`. Anything else asks.
 - `lead`: `git status`, `git log`, `ls`, `scripts/board.sh`. Nothing else.
 - `reviewer`: `git diff|log|show|status` and `scripts/check.sh`.
+- `reporter`: `scripts/board.sh`. Nothing else.
 
 ## Subagents and skills
 
@@ -36,6 +38,6 @@ Each agent can call only the sub-agents it needs (`lead` → `tech-lead`, `explo
 
 ## V1 and V2 formats
 
-`global/` is the V1 format (`agent`, `permission` with `bash`/`task` maps). `global-v2/` is **generated** from it by `tools/gen_v2.py` into the 2.x format: an ordered `permissions` list of `{action, resource, effect}` entries, `shell` and `subagent` in place of `bash` and `task`, `model: provider/model#variant`, and `agents` in place of `agent`. The generator also emits both relative and absolute path forms of each file rule. Never edit `global-v2/` by hand.
+`global/` is the V1 format (`agent`, `permission` with `bash`/`task` maps). `global-v2/` is **generated** from it and from `models.conf` by `tools/gen_v2.py` into the 2.x format: an ordered `permissions` list of `{action, resource, effect}` entries, `shell` and `subagent` in place of `bash` and `task`, `model: provider/model#variant`, and `agents` in place of `agent`. The generator also emits both relative and absolute path forms of each file rule. Never edit `global-v2/` by hand.
 
 OpenCode 2.x reads V1-format config by normalizing it in memory, which is why `setup.command` can fall back to V1 files if 2.x rejects the V2 ones.

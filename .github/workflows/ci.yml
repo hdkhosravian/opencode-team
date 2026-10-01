@@ -18,11 +18,44 @@ jobs:
           for f in global/team/project-template/scripts/*.sh; do bash -n "$f"; done
       - name: agent, command and skill frontmatter
         run: python3 tests/validate_frontmatter.py
-      - name: global-v2 is generated from global
+      - name: global and global-v2 are generated from models.conf
         run: |
           python3 tools/gen_v2.py
-          git diff --exit-code -- global-v2
+          git diff --exit-code -- global global-v2
+          test -z "$(git status --porcelain)"
+      - name: models.py (show, apply, set) tests
+        run: |
+          python3 -W error tests/test_models.py
+          python3 global/team/models.py show --conf models.conf
       - name: board.sh verify negative tests
         run: bash tests/board/run.sh
       - name: loop-contract gate runs
         run: python3 global/skills/loop-contract/scripts/fold_ledger.py --help
+  real-opencode:
+    # installs the real OpenCode (V1 and V2) and runs the permission and model checks against what it resolves.
+    # Depends on opencode.ai being reachable, so a failure here is a warning, not a blocker.
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: OpenCode 2.x, V2 config
+        run: |
+          curl -fsSL https://opencode.ai/v2/install | bash
+          export PATH="$HOME/.opencode/bin:$PATH"
+          mkdir -p ~/.config/opencode
+          cp -R global/. ~/.config/opencode/ && cp -R global-v2/. ~/.config/opencode/
+          opencode debug agents > agents.json
+          python3 global/team/models.py verify agents.json --conf models.conf
+          python3 tests/perm_check.py agents.json
+      - name: OpenCode 1.x, V1 config
+        run: |
+          rm -rf ~/.opencode ~/.config/opencode ~/.local/share/opencode
+          curl -fsSL https://opencode.ai/install | bash
+          export PATH="$HOME/.opencode/bin:$PATH"
+          mkdir -p ~/.config/opencode agents1
+          cp -R global/. ~/.config/opencode/
+          for a in lead tech-lead developer developer-strong reviewer reporter; do opencode debug agent "$a" > "agents1/$a.json"; done
+          python3 tests/perm_check.py --v1 agents1

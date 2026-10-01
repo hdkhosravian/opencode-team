@@ -19,7 +19,7 @@
           │ TDD: red→green→ │   │ فقط‌خواندنی، هر     │
           │ refactor        │   │ یافته با شاهد       │
           └─────────────────┘   └─────────────────────┘
-      explore / general / title / compaction  →  Gemini (کارهای پس‌زمینه)
+      explore / general / title / compaction / reporter  →  مدل پس‌زمینه (پیش‌فرض Gemini)
 ```
 
 `developer-strong` (Sonnet) هم‌ردیف developer است ولی فقط برای کارت‌های پرخطر (T2) یا وقتی Gemini از پسِ کار برنیامد. بقیهٔ کارها ارزان می‌مانند.
@@ -114,7 +114,7 @@
 | `/epic <مسیر epic>` | tech-lead | تحویل **برش بعدی** یک epic؛ دوباره بزن تا تمام شود (هر برش با کانتکست تازه) |
 | `/task <شرح یا مسیر کارت>` | tech-lead | یک فیچر یا باگ از اول تا آخر خط لوله |
 | `/review` | reviewer | بازبینی تغییرات فعلی |
-| `/status` | general (Gemini) | خروجی `board.sh` و `PROGRESS.md`، بدون مصرف توکن Claude |
+| `/status` | reporter (مدل پس‌زمینه) | خروجی `board.sh` و `PROGRESS.md`، فقط‌خواندنی، بدون مصرف توکن Claude |
 
 با **Tab** بین lead و tech-lead جابه‌جا می‌شوی. بعد از هر وقفه یا بستن ترمینال، به tech-lead بگو «ادامه بده»؛ وضعیت را از روی تخته می‌خواند و از همان‌جا ادامه می‌دهد.
 
@@ -160,10 +160,21 @@ scripts/board.sh          تخته تسک‌ها (وضعیت، کارت بعدی
 
 ## عوض کردن مدل‌ها
 
-- **V2:** مدل lead، tech-lead، reviewer و developer در بالای هر فایل `~/.config/opencode/agents/*.md` است (خط `model:`، مثلاً `anthropic/claude-opus-5-5#high`؛ بعد از `#` سطح تفکر می‌آید). مدل ایجنت‌های پس‌زمینه در `opencode.json`، بخش `agents`.
-- **V1:** همه در `opencode.json`، بخش `agent`.
+همهٔ مدل‌ها در یک فایل‌اند: [`models.conf`](models.conf) کنار کیت، در شش نقش (`LEAD`، `TECH_LEAD`، `REVIEWER`، `DEVELOPER`، `DEVELOPER_STRONG`، `BACKGROUND`). هر خط شکل `provider/model#سطح-تفکر` دارد:
 
-برای ارزان‌تر کردن reviewer یا گذاشتن DeepSeek جای Gemini فقط همان خط را عوض کن. مدل reviewer را از خانوادهٔ متفاوت با developer نگه دار.
+```
+DEVELOPER=google/gemini-3.8-flash#high
+```
+
+فایل را عوض کن و دوباره `bash setup.command` را بزن (برای V1 و V2 هر دو اعمال می‌شود). یا فقط یک نقش را روی کانفیگ نصب‌شده عوض کن:
+
+```bash
+python3 ~/.config/opencode/team/models.py set developer openai/gpt-5.4-nano
+python3 ~/.config/opencode/team/models.py show    # نقش‌ها، مدل‌ها و هشدارها
+python3 ~/.config/opencode/team/models.py check   # تأیید شناسه‌ها در models.dev
+```
+
+برای هر provider تازه، داخل OpenCode یک بار `/connect` بزن. اگر reviewer با developer یا developer-strong هم‌provider باشد هشدار می‌دهد، چون ریویوکنندهٔ هم‌خانواده نقطه‌کورهای نویسنده را دارد (با تنظیم پیش‌فرض، در کارت‌های T2 همین پیش می‌آید؛ مهار آن خواندن diff پرخطر توسط tech-lead است). جزئیات: `docs/customizing.md`.
 
 ## نسخهٔ OpenCode: V2 و راه برگشت
 
@@ -186,7 +197,7 @@ Superpowers و بقیه اسکیل‌های خودکار دارند که با ا
 
 روی باینری واقعی OpenCode 1.18.33 (V1):
 - همهٔ ایجنت‌ها (از جمله developer-strong) با مدل و variant درست resolve می‌شوند و هر ۱۴ اسکیل پیدا می‌شود. ۸۰ آزمون مجوز (ویرایش، shell، زیرایجنت، اسکیل) برای هر نقش مطابق طراحی است.
-- `board.sh` با ۲۱ حالت (done بدون commit، ریویو نیامده، تست پذیرش ناموجود، سقف تلاش، دو کارت doing، تعداد برش‌ها دست‌کاری‌شده و…) تست شد، با سه پیاده‌سازی awk که یکی همان awk خود macOS است.
+- `board.sh` با ۲۲ حالت (done بدون commit، ریویو نیامده، تست پذیرش ناموجود، سقف تلاش، دو کارت doing، تعداد برش‌ها دست‌کاری‌شده و…) تست شد، با سه پیاده‌سازی awk که یکی همان awk خود macOS است.
 - روی Mac تو: OpenCode 2.0.20 نصب شد، مدل‌ها در models.dev تأیید شدند و `opencode debug config` تنظیمات V2 را پذیرفت. دستور `opencode debug agents` در V2 هست و `setup.command` با آن ثبت ایجنت‌ها را چک می‌کند.
 - `bootstrap.sh` فایل موجود را بازنویسی نمی‌کند (اگر `scripts/` پروژه با نسخهٔ کیت فرق داشته باشد، فقط خبر می‌دهد؛ پروژه‌هایی که قبلاً `/team-init` خورده‌اند اسکریپت‌های قدیمی را نگه می‌دارند).
 - `setup.command` بک‌آپ می‌گیرد (اگر `opencode.jsonc` یا `AGENTS.md` شخصی داشته باشی هشدار می‌دهد)، نصب می‌کند و اعتبارسنجی می‌کند.
@@ -194,4 +205,6 @@ Superpowers و بقیه اسکیل‌های خودکار دارند که با ا
 
 بعد از ساخت، یک ایجنت مستقل که کار را ندیده بود کل کیت را بازبینی کرد. همهٔ ایرادهای جدی‌اش (مثل اجرا نشدن تست‌های پذیرش در Ruby و راه دور زدن تست‌ها با کانفیگ) رفع و دوباره تست شد.
 
-**تست نشده:** (۱) رفتار دقیق مجوزهای V2 و کلیدهای `tool_output` و `experimental.subagent_depth` روی باینری V2، چون از محیط من به آن دسترسی نیست؛ معادل‌بودن با V1 را روی نمونه‌ها سنجیدم و `setup.command` اگر V2 چیزی را نپذیرد خودش به فرمت V1 برمی‌گردد. (۲) اجرای واقعی با مدل‌ها (کلید API در دسترس من نبود). بعد از چند کار واقعی، اگر جایی از پرامپت‌ها باید سفت‌تر شود، همان‌جا اصلاح می‌کنیم.
+**تست شده روی باینری واقعی OpenCode 1.18.34 و 2.0.21** (نصب با `setup.command` در یک HOME آزمایشی، هر دو فرمت): کانفیگ resolve می‌شود، هر ایجنت مدل و variant خودش را از `models.conf` می‌گیرد (حتی بعد از `models.py set` و عوض‌کردن provider)، و ۱۷۰ آزمون مجوز برای هر فرمت روی قانون‌هایی که خود OpenCode حساب کرده درست است (`tests/perm_check.py`؛ `setup.command` هر بار آن را اجرا می‌کند). یک اجرای زنده با مدل رایگان هم نشان داد tech-lead می‌تواند `scripts/board.sh` را اجرا کند و lead دستورهای غیرمجاز را نمی‌تواند. کلیدهای `tool_output` و `experimental.subagent_depth` در V2 پذیرفته می‌شوند.
+
+**تست نشده:** (۱) اجرای واقعی با Opus و Sonnet و Gemini (کلید API در دسترس من نبود)؛ (۲) دستور `/status` از ابتدا تا انتها (مدل پس‌زمینه باید provider متصل داشته باشد). بعد از چند کار واقعی، اگر جایی از پرامپت‌ها باید سفت‌تر شود، همان‌جا اصلاح می‌کنیم.

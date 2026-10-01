@@ -48,6 +48,9 @@
     },
     "plan": {
       "disable": true
+    },
+    "reporter": {
+      "model": "google/gemini-3.8-flash"
     }
   },
   "permission": {

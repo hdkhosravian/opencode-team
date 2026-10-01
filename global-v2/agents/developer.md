@@ -191,16 +191,25 @@ permissions:
   resource: npm run test *
   effect: allow
 - action: shell
+  resource: npm run test:*
+  effect: allow
+- action: shell
   resource: npm run lint
   effect: allow
 - action: shell
   resource: npm run lint *
   effect: allow
 - action: shell
+  resource: npm run lint:*
+  effect: allow
+- action: shell
   resource: npm run typecheck
   effect: allow
 - action: shell
   resource: npm run typecheck *
+  effect: allow
+- action: shell
+  resource: npm run typecheck:*
   effect: allow
 - action: shell
   resource: npx vitest

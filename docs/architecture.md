@@ -27,19 +27,24 @@ Product manager, domain architect and planner are three *hats* of one agent (`le
 | `developer-strong` | Same rules, stronger model, used only when risk or a failure justifies it |
 | `reviewer` | Different model family from the developer, read-only, fresh context |
 | `explore` | Cheap codebase search so expensive agents never open files "to get oriented" |
+| `reporter` | `/status` must not be able to edit card state, so it has its own read-only agent instead of the unrestricted built-in `general` |
 
 `build` and `plan` (OpenCode's built-ins) are disabled so there is exactly one way into the team.
 
 ## Models
 
-| Agent | Model |
-|---|---|
-| lead | `anthropic/claude-opus-5-5`, variant `high` |
-| tech-lead, reviewer, developer-strong | `anthropic/claude-sonnet-5-5` |
-| developer | `google/gemini-3.8-flash`, variant `high` |
-| explore, general, title, compaction | `google/gemini-3.8-flash` |
+The defaults below come from `models.conf`, the single place where models are chosen (six roles). How to change them: [customizing.md](customizing.md).
 
-Keep the reviewer in a different model family from the developer: a model reviewing its own family's output shares its blind spots. How to change any of this: [customizing.md](customizing.md).
+| Role | Agents | Default |
+|---|---|---|
+| `LEAD` | lead | `anthropic/claude-opus-5-5`, variant `high` |
+| `TECH_LEAD` | tech-lead (and the default model) | `anthropic/claude-sonnet-5-5` |
+| `REVIEWER` | reviewer | `anthropic/claude-sonnet-5-5` |
+| `DEVELOPER` | developer | `google/gemini-3.8-flash`, variant `high` |
+| `DEVELOPER_STRONG` | developer-strong | `anthropic/claude-sonnet-5-5` |
+| `BACKGROUND` | explore, general, title, compaction, summary, reporter | `google/gemini-3.8-flash` |
+
+Keep the reviewer in a different model family from the developer: a model reviewing its own family's output shares its blind spots. The defaults honor this for `developer` (Gemini) but not for `developer-strong` (Sonnet, the same family as the reviewer), so T2 cards rely on the tech lead's own read of the risky diff. `models.py` warns about this; point `REVIEWER` at another provider to close it.
 
 ## Two-loop TDD
 

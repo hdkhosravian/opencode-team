@@ -131,10 +131,10 @@ ERRS=0
 err() { ERRS=$((ERRS + 1)); [ "$ERRS" -le 20 ] && echo "ERROR: $*"; return 0; }
 
 cmd_verify() {
-  local tsv ncards=0 nepics=0 subjects doing=0
+  local tsv ncards=0 nepics=0 subjects doing=0 isgit=0
   tsv="$(cards_tsv)"
   subjects=""
-  git rev-parse --git-dir >/dev/null 2>&1 && subjects="$(git log --format=%s 2>/dev/null)"
+  if git rev-parse --git-dir >/dev/null 2>&1; then isgit=1; subjects="$(git log --format=%s 2>/dev/null || true)"; fi
   status_of() { printf '%s\n' "$tsv" | awk -F'\t' -v i="$1" '$1==i { print $4; exit }'; }
   if [ -n "$tsv" ]; then
     while IFS="$TAB" read -r id file risk status attempts review dev deps epic note title; do
@@ -164,7 +164,7 @@ cmd_verify() {
       if [ "$status" = "blocked" ] && { [ "$note" = "-" ] || [ "$note" = "?" ]; }; then err "$id: blocked without a Note (the reason)"; fi
       if [ "$status" = "done" ]; then
         case "$attempts" in 0) err "$id: done with Attempts 0 (no developer run was recorded)" ;; esac
-        if [ -n "$subjects" ]; then
+        if [ "$isgit" -eq 1 ]; then
           printf '%s\n' "$subjects" | grep -Eq "^(feat|fix|refactor|perf|chore)\($id\)" || err "$id: done, but no feat|fix|refactor|perf|chore($id) commit exists (test($id) and docs($id) do not count)"
         fi
         if [ "$risk" != "T0" ] && [ "$risk" != "?" ]; then
