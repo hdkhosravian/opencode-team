@@ -97,7 +97,7 @@
 
 | ابزار | تصمیم | دلیل |
 |---|---|---|
-| loop-contract | **نصب شد** | برای کار دسته‌ای و بلندمدت. `SKILL.md` اصلی ۳۸ کیلوبایت است، پس فقط tech-lead آن را می‌بیند. تغییرها در کپی کیت: مسیر حالت `.opencode/loops/` به‌جای `.claude/loops/` (تا developer اجازهٔ نوشتن نداشته باشد)، توضیح کوتاه‌تر، و یادداشتی دربارهٔ OpenCode (نبودن ScheduleWakeup و CronCreate). اسکریپت‌های گیت (`fold_ledger.py` و `extract_requirements.py`) دست‌نخورده‌اند و به `python3` نیاز دارند؛ فایل‌های مرجع فقط در مسیرهای `.claude/` عوض شده‌اند. |
+| loop-contract | **نصب می‌شود (از گیت خودش)** | برای کار دسته‌ای و بلندمدت. کپی آن در این مخزن نیست: `setup.sh` آن را با `git clone` از مخزن [loop-contract-skill](https://github.com/hdkhosravian/loop-contract-skill) روی commit مشخص می‌گیرد و یک پچ کوچک برای OpenCode اعمال می‌کند (`global/team/patches/`): مسیر حالت `.opencode/loops/` به‌جای `.claude/loops/` (تا developer اجازهٔ نوشتن نداشته باشد)، توضیح کوتاه‌تر، و یادداشتی دربارهٔ OpenCode. `SKILL.md` اصلی ۳۸ کیلوبایت است، پس فقط tech-lead آن را می‌بیند. اسکریپت‌های گیت (`fold_ledger.py` و `extract_requirements.py`) دست‌نخورده‌اند و به `python3` نیاز دارند. |
 | context-mode | فعلاً نه | پلاگین‌اش برای API نسخه ۱ نوشته شده و سازگاری با V2 (که روی Mac توست) مستند نیست. ۱۱ ابزار به پرامپت همهٔ ایجنت‌ها اضافه می‌کند، و قانونش «همهٔ shell از sandbox» با مجوزهای ریز و TDD این تیم تداخل دارد. چیزی را حل می‌کند که تیم خودش حل کرده: `check.sh` خروجی را کوتاه می‌کند و تحویل‌ها با مسیر فایل است. |
 | headroom | فعلاً نه | یک پروکسی بین OpenCode و Claude/Gemini است. روی لاگ و JSON تکراری خوب فشرده می‌کند ولی خودشان می‌گویند متن و خروجی‌های از قبل فشرده را خیلی کم می‌کند. یک قطعهٔ متحرک اضافه است و چون پرامپت را بازنویسی می‌کند، باید اول مطمئن شد کش پرامپت Claude را نمی‌شکند. |
 | hyperresearch | نه | فقط برای Claude Code و Codex ساخته شده. هر اجرای کامل ۱۶ مرحله، ده‌ها زیرایجنت، ده‌ها تا صدها منبع و یکی دو ساعت (در سطح بالاتر چند ساعت) است، یعنی عکس هدف کم‌کردن توکن. کارش (گزارش پژوهشی عمیق) هم جزو کار تیم کدنویسی نیست. برای پژوهش جدا، در Claude Code استفاده‌اش کن. |
@@ -148,44 +148,47 @@ scripts/board.sh          تخته تسک‌ها (وضعیت، کارت بعدی
 
 ## کار آخر با تو
 
-0. مخزن را بگیر و یک بار `setup.command` را اجرا کن:
+0. مخزن را بگیر و یک بار `setup.sh` را اجرا کن (macOS و Linux؛ به `bash`، `git` و `curl` نیاز دارد):
    ```
    git clone https://github.com/hdkhosravian/opencode-team ~/Tools/opencode-team
-   bash ~/Tools/opencode-team/setup.command
+   bash ~/Tools/opencode-team/setup.sh
    ```
-   (دابل‌کلیک روی فایل هم کار می‌کند، ولی اگر macOS جلویش را گرفت همین دستور را در Terminal بزن.)
+   (در macOS دابل‌کلیک روی `setup.command` هم کار می‌کند.)
 1. در Terminal به پوشهٔ پروژه (یک مخزن git) برو و `opencode` بزن.
 2. `/connect` → **Anthropic** (API key) و **Google** (Gemini API key از AI Studio). برای Claude از API key استفاده کن؛ استفاده از اشتراک Claude در ابزار شخص ثالث ممکن است محدود باشد.
 3. `/team-init` و بعد `/kickoff` یا `/task`.
 
 ## عوض کردن مدل‌ها
 
-همهٔ مدل‌ها در یک فایل‌اند: [`models.conf`](models.conf) کنار کیت، در شش نقش (`LEAD`، `TECH_LEAD`، `REVIEWER`، `DEVELOPER`، `DEVELOPER_STRONG`، `BACKGROUND`). هر خط شکل `provider/model#سطح-تفکر` دارد:
+از داخل OpenCode، مثل `/model` در ابزارهای دیگر:
+
+```
+/model                                   نمایش شش نقش و مدل هر کدام
+/model developer openai/gpt-5.4-nano     عوض‌کردن یک نقش (provider/model، و اختیاری #سطح-تفکر)
+/model claude-only                       اعمال یک preset (دیگری: budget)
+/model reset                             برگشت به پیش‌فرض (یا: /model reset developer)
+```
+
+تغییر در `~/.config/opencode/team/models.local.conf` ذخیره می‌شود و با به‌روزرسانی از بین نمی‌رود. در OpenCode 2.x همان لحظه اعمال می‌شود (دستور خودش `opencode reload` را اجرا می‌کند)؛ در 1.x یک بار `opencode` را دوباره باز کن. خود `/model` روی مدل ارزان پس‌زمینه اجرا می‌شود. برای تغییر فقط همین نشست از `/models` خود OpenCode استفاده کن. از ترمینال: `python3 ~/.config/opencode/team/models.py` یک منوی تعاملی باز می‌کند (`show`، `set`، `preset`، `reset` و `check` هم هست).
+
+پیش‌فرض‌ها در فایل [`models.conf`](models.conf) کنار کیت‌اند، شش نقش (`LEAD`، `TECH_LEAD`، `REVIEWER`، `DEVELOPER`، `DEVELOPER_STRONG`، `BACKGROUND`)، هر خط شکل `provider/model#سطح-تفکر`:
 
 ```
 DEVELOPER=google/gemini-3.8-flash#high
 ```
 
-فایل را عوض کن و دوباره `bash setup.command` را بزن (برای V1 و V2 هر دو اعمال می‌شود). یا فقط یک نقش را روی کانفیگ نصب‌شده عوض کن:
-
-```bash
-python3 ~/.config/opencode/team/models.py set developer openai/gpt-5.4-nano
-python3 ~/.config/opencode/team/models.py show    # نقش‌ها، مدل‌ها و هشدارها
-python3 ~/.config/opencode/team/models.py check   # تأیید شناسه‌ها در models.dev
-```
-
-برای هر provider تازه، داخل OpenCode یک بار `/connect` بزن. اگر reviewer با developer یا developer-strong هم‌provider باشد هشدار می‌دهد، چون ریویوکنندهٔ هم‌خانواده نقطه‌کورهای نویسنده را دارد (با تنظیم پیش‌فرض، در کارت‌های T2 همین پیش می‌آید؛ مهار آن خواندن diff پرخطر توسط tech-lead است). جزئیات: `docs/customizing.md`.
+برای عوض‌کردن پیش‌فرض‌ها این فایل را ویرایش کن و دوباره `bash setup.sh` بزن. برای هر provider تازه، داخل OpenCode یک بار `/connect` بزن. اگر reviewer با developer یا developer-strong هم‌provider باشد `models.py` هشدار می‌دهد، چون ریویوکنندهٔ هم‌خانواده نقطه‌کورهای نویسنده را دارد (با تنظیم پیش‌فرض، در کارت‌های T2 همین پیش می‌آید؛ مهار آن خواندن diff پرخطر توسط tech-lead است). جزئیات: `docs/customizing.md`.
 
 ## نسخهٔ OpenCode: V2 و راه برگشت
 
-`setup.command` به‌صورت پیش‌فرض **OpenCode 2.x** را با نصب‌کنندهٔ رسمی (باینری آماده؛ بدون Homebrew و بدون Xcode) نصب می‌کند، چون Homebrew فرمول OpenCode را از سورس می‌سازد و به Xcode جدید نیاز دارد. پوشهٔ `global-v2/` فرمت تازه را دارد (`agents`، `permissions` به‌صورت فهرست مرتب، `shell` و `subagent` به‌جای `bash` و `task`، `model#variant`). اسکیل‌ها، `AGENTS.md`، `bootstrap.sh` و `check.sh` بین دو نسخه مشترک‌اند.
+`setup.sh` به‌صورت پیش‌فرض **OpenCode 2.x** را با نصب‌کنندهٔ رسمی (باینری آماده؛ بدون Homebrew و بدون Xcode) نصب می‌کند، چون Homebrew فرمول OpenCode را از سورس می‌سازد و به Xcode جدید نیاز دارد. پوشهٔ `global-v2/` فرمت تازه را دارد (`agents`، `permissions` به‌صورت فهرست مرتب، `shell` و `subagent` به‌جای `bash` و `task`، `model#variant`). اسکیل‌ها، `AGENTS.md`، `bootstrap.sh` و `check.sh` بین دو نسخه مشترک‌اند.
 
-تنظیمات V2 از روی مستندات رسمی نوشته شده و قبل از نصب روی باینری V2 تست نشده. اسکریپت بعد از نصب خودش آن را امتحان می‌کند:
+اسکریپت بعد از نصب، تنظیمات V2 را روی باینری نصب‌شده امتحان می‌کند:
 1. اگر V2 تنظیمات را پذیرفت، همان می‌ماند.
 2. اگر رد کرد، همان تنظیمات را با فرمت V1 نصب می‌کند (V2 فرمت V1 را در حافظه تبدیل می‌کند) و در `setup.log` می‌نویسد.
 3. اگر نصب V2 اصلاً ممکن نبود، V1 نصب می‌شود.
 
-برای نصب دستی نسخهٔ پایدار ۱: `OPENCODE_MAJOR=1 bash ~/Tools/opencode-team/setup.command`
+برای نصب دستی نسخهٔ پایدار ۱: `OPENCODE_MAJOR=1 bash ~/Tools/opencode-team/setup.sh`
 
 نکته‌های V2: کلید `small_model` حذف شده و جایش `agents.title.model` است. `instructions` در کانفیگ خوانده نمی‌شود، برای همین دستورها در `AGENTS.md` هستند. فیلد `temperature` هم دیگر در فرونت‌متر ایجنت پذیرفته نمی‌شود، و این کیت از آن استفاده نمی‌کند.
 
@@ -193,18 +196,8 @@ python3 ~/.config/opencode/team/models.py check   # تأیید شناسه‌ها
 
 Superpowers و بقیه اسکیل‌های خودکار دارند که با این خط لوله هم‌پوشانی دارند؛ دو فرایند موازی یعنی مدل گیج و توکن دوبرابر. ابزارهای «صرفه‌جویی توکن» (RTK، caveman) در تست‌های مستقل هزینه را کم نکردند. و هر اسکیل شخص ثالث کدی است که با دسترسی تو اجرا می‌شود. ۱۳ اسکیل این کیت را خودم نوشتم، کوتاه و قابل‌خواندن؛ چهاردهمی `loop-contract` همان مخزن خودت است، با چند تغییر کوچک برای OpenCode (بخش «ابزارهایی که بررسی کردم»).
 
-## چه چیزی تست شده
+## تست
 
-روی باینری واقعی OpenCode 1.18.33 (V1):
-- همهٔ ایجنت‌ها (از جمله developer-strong) با مدل و variant درست resolve می‌شوند و هر ۱۴ اسکیل پیدا می‌شود. ۸۰ آزمون مجوز (ویرایش، shell، زیرایجنت، اسکیل) برای هر نقش مطابق طراحی است.
-- `board.sh` با ۲۲ حالت (done بدون commit، ریویو نیامده، تست پذیرش ناموجود، سقف تلاش، دو کارت doing، تعداد برش‌ها دست‌کاری‌شده و…) تست شد، با سه پیاده‌سازی awk که یکی همان awk خود macOS است.
-- روی Mac تو: OpenCode 2.0.20 نصب شد، مدل‌ها در models.dev تأیید شدند و `opencode debug config` تنظیمات V2 را پذیرفت. دستور `opencode debug agents` در V2 هست و `setup.command` با آن ثبت ایجنت‌ها را چک می‌کند.
-- `bootstrap.sh` فایل موجود را بازنویسی نمی‌کند (اگر `scripts/` پروژه با نسخهٔ کیت فرق داشته باشد، فقط خبر می‌دهد؛ پروژه‌هایی که قبلاً `/team-init` خورده‌اند اسکریپت‌های قدیمی را نگه می‌دارند).
-- `setup.command` بک‌آپ می‌گیرد (اگر `opencode.jsonc` یا `AGENTS.md` شخصی داشته باشی هشدار می‌دهد)، نصب می‌کند و اعتبارسنجی می‌کند.
-- `check.sh` خروجی را کوتاه می‌کند.
+CI روی Linux و macOS اجرا می‌شود: `models.py` (set، preset، reset، دستور `/model`، اعمال برای V1 و V2)، `fetch-skills.sh` روی یک مخزن git، ۲۲ حالت `board.sh verify`، فرانت‌مترها و ارجاع‌های میان فایل‌ها (اسکیل‌ها، زیرایجنت‌ها، نقش‌ها)، و اینکه `global-v2/` از `models.conf` ساخته می‌شود. یک job دیگر `setup.sh` را واقعاً روی Linux با OpenCode 2.x و 1.x اجرا می‌کند.
 
-بعد از ساخت، یک ایجنت مستقل که کار را ندیده بود کل کیت را بازبینی کرد. همهٔ ایرادهای جدی‌اش (مثل اجرا نشدن تست‌های پذیرش در Ruby و راه دور زدن تست‌ها با کانفیگ) رفع و دوباره تست شد.
-
-**تست شده روی باینری واقعی OpenCode 1.18.34 و 2.0.21** (نصب با `setup.command` در یک HOME آزمایشی، هر دو فرمت): کانفیگ resolve می‌شود، هر ایجنت مدل و variant خودش را از `models.conf` می‌گیرد (حتی بعد از `models.py set` و عوض‌کردن provider)، و ۱۷۰ آزمون مجوز برای هر فرمت روی قانون‌هایی که خود OpenCode حساب کرده درست است (`tests/perm_check.py`؛ `setup.command` هر بار آن را اجرا می‌کند). یک اجرای زنده با مدل رایگان هم نشان داد tech-lead می‌تواند `scripts/board.sh` را اجرا کند و lead دستورهای غیرمجاز را نمی‌تواند. کلیدهای `tool_output` و `experimental.subagent_depth` در V2 پذیرفته می‌شوند.
-
-**تست نشده:** (۱) اجرای واقعی با Opus و Sonnet و Gemini (کلید API در دسترس من نبود)؛ (۲) دستور `/status` از ابتدا تا انتها (مدل پس‌زمینه باید provider متصل داشته باشد). بعد از چند کار واقعی، اگر جایی از پرامپت‌ها باید سفت‌تر شود، همان‌جا اصلاح می‌کنیم.
+`setup.sh` هر نصب را روی OpenCode واقعی (1.18.34 و 2.0.21) اعتبارسنجی می‌کند: کانفیگ resolve می‌شود، هر ایجنت مدل و variant خودش را از `models.conf` می‌گیرد، ۱۷۰ آزمون مجوز (ویرایش، shell، خواندن، اسکیل، زیرایجنت، webfetch برای هر شش ایجنت) روی قانون‌هایی که خود OpenCode حساب کرده درست است (`tests/perm_check.py`)، و `check.sh`، `board.sh` و gate مربوط به `loop-contract` اجرا می‌شوند.

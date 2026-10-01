@@ -42,7 +42,7 @@ def split(text):
     return yaml.safe_load(m.group(1)), m.group(2)
 
 def main():
-    conf = models.load_conf(ROOT / 'models.conf')
+    conf = models.load_conf(ROOT / 'models.conf', local=False)  # defaults only, never a personal models.local.conf
     models.apply_dir(str(SRC), conf)  # V1: model, small_model and agent models in global/opencode.json
     for f in sorted((SRC/'agents').glob('*.md')):
         fm,body=split(f.read_text())
@@ -51,7 +51,9 @@ def main():
         (DST/'agents'/f.name).write_text(dump(new,body))
     for f in sorted((SRC/'commands').glob('*.md')):
         fm,body=split(f.read_text())
-        new={'description':fm['description'],'agent':fm['agent']}
+        new={'description':fm['description']}
+        if fm.get('agent'): new['agent']=fm['agent']
+        if fm.get('model'): new['model']=conf['BACKGROUND']  # commands that name a model use the background model
         if fm.get('subtask'): new['subagent']=True
         (DST/'commands'/f.name).write_text(dump(new,body))
     cfg=json.loads((SRC/'opencode.json').read_text())

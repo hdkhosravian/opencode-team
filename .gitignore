@@ -1,4 +1,6 @@
 setup.log
+models.local.conf
+opencode.v2.rejected.json
 .DS_Store
 __pycache__/
 *.pyc

@@ -48,14 +48,14 @@ Engineering principles (SOLID, DDD, design patterns, Clean Code, TDD, hexagonal 
 
 ## Quick start
 
-Requirements: macOS, `git`, `curl`, an Anthropic API key and a Google (Gemini) API key. No Homebrew or Xcode needed.
+Requirements: macOS or Linux, `bash`, `git`, `curl`, and an API key for each provider you use (the default setup uses Anthropic and Google). `python3` (3.8 or newer) is optional and adds the model and permission checks. No Homebrew or Xcode needed.
 
 ```bash
 git clone https://github.com/hdkhosravian/opencode-team ~/Tools/opencode-team
-bash ~/Tools/opencode-team/setup.command
+bash ~/Tools/opencode-team/setup.sh      # macOS: you can also double-click setup.command
 ```
 
-The script installs OpenCode with the official prebuilt installer (2.x by default, 1.x with `OPENCODE_MAJOR=1`), backs up any existing `~/.config/opencode`, installs the team globally, checks the model IDs against models.dev and validates the result. It writes a full log to `setup.log`.
+The script installs OpenCode with the official prebuilt installer (2.x by default, 1.x with `OPENCODE_MAJOR=1`), backs up any existing `~/.config/opencode`, installs the team globally, applies [`models.conf`](models.conf), installs the third-party skill from its git repository, checks the model IDs against models.dev and validates the result. It writes a full log to `setup.log`.
 
 Then, in a **new** terminal tab:
 
@@ -68,7 +68,7 @@ opencode
 2. `/team-init` once per project. It creates `PROGRESS.md`, `docs/`, the gate script and the task board, and fills in `AGENTS.md`.
 3. `/kickoff <idea>` for a new product, or `/task <what you want>` for a feature or fix.
 
-Not on macOS? The kit itself is just files. Copy `global/` to `~/.config/opencode/` (and, for OpenCode 2.x, copy `global-v2/` over it), then `chmod +x` the scripts under `team/`. Details in [docs/customizing.md](docs/customizing.md).
+No installer wanted? The kit itself is just files. Copy `global/` to `~/.config/opencode/` (and, for OpenCode 2.x, copy `global-v2/` over it), `chmod +x` the scripts under `team/`, and run `team/fetch-skills.sh`. Details in [docs/customizing.md](docs/customizing.md).
 
 ## What a task looks like
 
@@ -125,21 +125,24 @@ If the tech lead is unsure between two lanes it takes the lower one and lets a f
 
 ## Change the models
 
-Every model is one line in [`models.conf`](models.conf), in six roles (`LEAD`, `TECH_LEAD`, `REVIEWER`, `DEVELOPER`, `DEVELOPER_STRONG`, `BACKGROUND`):
+Switch from inside OpenCode, like `/model` in other tools:
+
+```
+/model                                   show the six roles and their models
+/model developer openai/gpt-5.4-nano     change one role (provider/model, optional #reasoning-level)
+/model claude-only                       apply a preset (also: budget)
+/model reset                             back to the defaults (or: /model reset developer)
+```
+
+The change is written to `~/.config/opencode/team/models.local.conf`, so it survives an update. On OpenCode 2.x it is active at once (the command runs `opencode reload` for you); on 1.x restart `opencode`. `/model` itself runs on the cheap background model. For one session only, use OpenCode's own `/models`. From a terminal: `python3 ~/.config/opencode/team/models.py` opens an interactive picker (`show`, `set`, `preset`, `reset`, `check` also work).
+
+The defaults are one line each in [`models.conf`](models.conf), in six roles (`LEAD`, `TECH_LEAD`, `REVIEWER`, `DEVELOPER`, `DEVELOPER_STRONG`, `BACKGROUND`):
 
 ```
 DEVELOPER=google/gemini-3.8-flash#high      # provider/model#reasoning-level
 ```
 
-Edit the file and run `bash setup.command` again, or change one role on the installed config:
-
-```bash
-python3 ~/.config/opencode/team/models.py set developer openai/gpt-5.4-nano
-python3 ~/.config/opencode/team/models.py show     # roles, models, warnings
-python3 ~/.config/opencode/team/models.py check    # verify IDs against models.dev
-```
-
-It works for OpenCode 1.x and 2.x. Each provider needs `/connect`. It warns when the reviewer and a developer share a provider (a reviewer from the same family shares the author's blind spots). Details in [docs/customizing.md](docs/customizing.md).
+Edit that file and run `bash setup.sh` again to change the defaults. Each provider needs `/connect`. `models.py` warns when the reviewer and a developer share a provider (a reviewer from the same family shares the author's blind spots). Details in [docs/customizing.md](docs/customizing.md).
 
 ## Commands
 
@@ -150,6 +153,7 @@ It works for OpenCode 1.x and 2.x. Each provider needs `/connect`. It warns when
 | `/epic <epic path>` | tech-lead | Delivers the **next slice** of an epic; run again to continue |
 | `/task <description or card path>` | tech-lead | One feature or fix through the pipeline |
 | `/review` | reviewer | Review current changes |
+| `/model` | reporter (background model) | Show or change the models, apply a preset |
 | `/status` | reporter (background model) | Board and `PROGRESS.md` summary, read-only, no Claude tokens |
 
 `Tab` switches between `lead` and `tech-lead`. After any pause, tell the tech lead to continue: it reads the board and resumes from the unfinished card.
@@ -188,11 +192,11 @@ scripts/board.sh          the board: status, next card, verify
 
 Developers can't edit acceptance tests, docs, `.opencode/`, `.github/`, the gate scripts or any OpenCode config. Changes to test-runner config (`package.json`, `pytest.ini`, `conftest.py`, ...) and new dependencies ask you first. `git push`, `reset --hard`, `clean`, `rm -rf`, `sudo` and reading `.env` are denied for everyone. Permissions are ordered so the locks come last (last match wins), which means an `ask` rule can't accidentally reopen a locked path. See [docs/safety-and-permissions.md](docs/safety-and-permissions.md).
 
-## What has and hasn't been tested
+## Testing
 
-Tested against the **real OpenCode 1.18.34 and 2.0.21** (installed by `setup.command` in a scratch HOME, config in both formats): the config resolves, all agents get the model and variant from `models.conf` (also after changing them with `models.py set`, including another provider), 170 permission cases per format pass on the rules OpenCode computed (`tests/perm_check.py`, run by `setup.command` on every install), and a live run with a free model showed the tech lead running `scripts/board.sh` and the lead refused unlisted commands. Also tested here (CI, and on macOS): `models.py` unit tests, the board verify cases (GNU and BSD `sed`), and frontmatter plus cross references. Earlier tested on the real OpenCode 1.18.33 binary: all agents resolve with the right model and variant, all 14 skills are found, and 80 permission checks match the design. `board.sh verify` is exercised by 22 cases (CI runs them, see `tests/board/run.sh`) on three awk implementations, including macOS's. `setup.command` was run end to end on a Mac with OpenCode 2.0.20.
+CI runs on Linux and macOS: `models.py` (set, preset, reset, `/model`, apply for V1 and V2), `fetch-skills.sh` against a git repository, the 22 `board.sh verify` cases (GNU and BSD `sed`, Linux and macOS awk), frontmatter and cross references (skills, sub-agents, roles), and a check that `global-v2/` is regenerated from `models.conf`. A second job runs `setup.sh` for real on Linux with OpenCode 2.x and 1.x.
 
-**Not tested:** live runs with the real Opus, Sonnet and Gemini models (no API keys here), so prompt quality is unproven; the `/status` command end to end (it runs on the background model, which needs its provider connected); and OpenCode on Linux or Windows (the installer targets macOS). Treat the prompts as a first version and tighten them after a few real tasks. Issues and PRs are welcome.
+`setup.sh` validates every install against the real OpenCode (1.18.34 and 2.0.21): the config resolves, each agent gets the model and variant from `models.conf`, 170 permission cases (edit, shell, read, skill, sub-agent, webfetch for all six agents) pass on the rules OpenCode computed (`tests/perm_check.py`), and `check.sh`, `board.sh` and the `loop-contract` gate run. Issues and PRs are welcome.
 
 ## Documentation
 
@@ -202,14 +206,14 @@ Tested against the **real OpenCode 1.18.34 and 2.0.21** (installed by `setup.com
 | [Task lifecycle](docs/task-lifecycle.md) | Cards, lanes, board, verify rules, review, escalation, pausing |
 | [Token management](docs/token-management.md) | Where tokens go and how each leak is closed |
 | [Safety and permissions](docs/safety-and-permissions.md) | Locks, ordering, V1 vs V2 formats |
-| [loop-contract](docs/loop-contract.md) | How the batch-job skill is wired in |
+| [loop-contract](docs/loop-contract.md) | How the batch-job skill is installed from its git repository and wired in |
 | [Tools evaluated](docs/tools-evaluated.md) | context-mode, headroom, hyperresearch, prime-agent and why not (yet) |
-| [Customizing](docs/customizing.md) | Change models, gates, skills; regenerate V2; run tests |
+| [Customizing](docs/customizing.md) | Change models, gates, skills (including skills from git); regenerate V2; run tests |
 | [Troubleshooting](docs/troubleshooting.md) | Installer, config and gate problems |
 
 ## Credits
 
-The batch-job skill is [loop-contract-skill](https://github.com/hdkhosravian/loop-contract-skill) (MIT), adapted for OpenCode. The other 13 skills were written for this kit.
+The batch-job skill is [loop-contract-skill](https://github.com/hdkhosravian/loop-contract-skill) (MIT). It is not stored in this repository: `setup.sh` installs it from its git repository at a pinned commit and applies a small OpenCode patch (`global/team/patches/`). The other 13 skills were written for this kit.
 
 ## License
 

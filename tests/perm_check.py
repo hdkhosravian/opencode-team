@@ -125,9 +125,12 @@ def main(argv):
         return 2
     by_id = {a["id"]: a for a in agents}
     bad = 0
+    missing = sorted({c[0] for c in CASES} - set(by_id))
+    for agent in missing:
+        bad += 1; print(f"FAIL {agent}: agent not registered (OpenCode may still be starting: run it again)")
     for agent, action, resource, want in CASES:
-        if agent not in by_id:
-            bad += 1; print(f"FAIL {agent}: agent not registered"); continue
+        if agent in missing:
+            continue
         got = effect(by_id[agent]["permissions"], action, resource)
         if got != want:
             bad += 1; print(f"FAIL {agent:16} {action:8} {resource!r}: expected {want}, got {got}")

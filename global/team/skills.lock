@@ -1,0 +1,6 @@
+# Third-party skills. They are NOT stored in this kit: fetch-skills.sh clones each repository at the pinned
+# commit, applies the kit's patch (if any) and installs the result into the OpenCode skills folder.
+# setup.sh runs it for you. To add a skill from any git repository, add a line and run fetch-skills.sh.
+#
+# name | git url | commit, tag or branch | folder of the skill inside the repo | patch in team/patches/ (optional)
+loop-contract|https://github.com/hdkhosravian/loop-contract-skill.git|9d13d9a|skills/loop-contract|loop-contract-opencode.patch

@@ -65,7 +65,7 @@ Keep the reviewer in a different model family from the developer: a model review
 | `design-principles` | tech-lead, developers, reviewer | SOLID, coupling, YAGNI/KISS, when a pattern is justified |
 | `debug-rootcause` | tech-lead, developers | Reproduce, isolate, hypothesize, minimal fix, prove |
 | `escalation-brief` | tech-lead, developers | 25-line brief after two failed attempts |
-| `loop-contract` | tech-lead only | Large or long jobs ([details](loop-contract.md)) |
+| `loop-contract` | tech-lead only | Large or long jobs. Third-party: installed from its git repository ([details](loop-contract.md)) |
 | `tdd-cycle` | developers | Strict red-green-refactor |
 | `clean-code` | developers, reviewer | Names, functions, errors, comments, boundaries |
 | `refactor-safely` | developers | Characterization tests first, small named refactorings |

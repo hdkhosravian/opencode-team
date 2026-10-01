@@ -40,4 +40,4 @@ Each agent can call only the sub-agents it needs (`lead` → `tech-lead`, `explo
 
 `global/` is the V1 format (`agent`, `permission` with `bash`/`task` maps). `global-v2/` is **generated** from it and from `models.conf` by `tools/gen_v2.py` into the 2.x format: an ordered `permissions` list of `{action, resource, effect}` entries, `shell` and `subagent` in place of `bash` and `task`, `model: provider/model#variant`, and `agents` in place of `agent`. The generator also emits both relative and absolute path forms of each file rule. Never edit `global-v2/` by hand.
 
-OpenCode 2.x reads V1-format config by normalizing it in memory, which is why `setup.command` can fall back to V1 files if 2.x rejects the V2 ones.
+OpenCode 2.x reads V1-format config by normalizing it in memory, which is why `setup.sh` can fall back to V1 files if 2.x rejects the V2 ones.

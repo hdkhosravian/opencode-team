@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.0 - Linux, skills from git, /model
+
+- **Linux and macOS.** `setup.sh` is the installer (`setup.command` is now a double-click wrapper for macOS). It no longer needs macOS tools: the model-ID check uses `models.py` instead of `osascript`, time limits use `timeout`, `gtimeout` or `perl`, the PATH line goes to the rc file of your shell, and the config folder follows `XDG_CONFIG_HOME`. CI runs the kit checks on Ubuntu and macOS, plus a job that runs `setup.sh` for real on Linux.
+- **Third-party skills come from their git repositories.** `loop-contract` is no longer copied into this repository. `global/team/skills.lock` pins its repository and commit, `team/fetch-skills.sh` clones it, applies `team/patches/loop-contract-opencode.patch` (the 142-line OpenCode adaptation) and installs it. Add any skill from git by adding a line. Tested with a local git repository (`tests/fetch_skills/run.sh`).
+- **`/model` inside OpenCode.** `/model` shows the six roles; `/model developer openai/gpt-5.4-nano` changes one; `/model claude-only` applies a preset (`claude-only`, `budget`); `/model reset` goes back. Choices are kept in `models.local.conf`, which `setup.sh` never overwrites. On 2.x the change is live at once (`models.py` runs `opencode reload`; 2.x does not reload agent files by itself); on 1.x restart `opencode`. The command runs on the background model. `models.py` without arguments opens an interactive picker that can search models.dev.
+
 ## 0.3.0 - models in one place
 
 - **`models.conf`**: every model (six roles: lead, tech-lead, reviewer, developer, developer-strong, background) in one file. `global/team/models.py` (`show`, `set`, `apply`, `check`; standard library only) applies it to the installed config, V1 and V2. `setup.command` applies it on every run and checks exactly those IDs against models.dev. The generator writes it into `global/opencode.json` and `global-v2/`, so the two formats can no longer drift; CI fails on a difference.

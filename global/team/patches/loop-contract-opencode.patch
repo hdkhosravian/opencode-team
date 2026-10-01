@@ -1,0 +1,142 @@
+--- a/SKILL.md
++++ b/SKILL.md
+@@ -1,9 +1,25 @@
+ ---
+ name: loop-contract
+-description: Turns a rough multi-step need in any domain into a loop-engineered plan and then carries it out. Triages first — routes to an existing skill/plugin/agent when one fits, else designs a contract with an immutable mission, three-kind termination, an append-only ledger spine, and a hard token policy. Every job is DONE (deliverable is the change or artifact, gated by an achievement oracle written red before the work) or KNOWN (deliverable is a verdict); in both it writes the contract then executes it. Use for implementations, bug fixes, migrations, refactors, backfills, audits, PR reviews, research sweeps, non-code artifacts like plans or designs, a messy briefing, or a recurring job ("every week", "keep monitoring"). ALSO use to resume a paused job — "continue", "keep going", "what's left", "is it done yet" — it finds the spine on disk and recomputes the unfinished items. ALSO use when several agents or workers must coordinate on one job — shared conventions, item ownership, mid-run discoveries, contradicting verdicts — it builds the coordination board itself and the gate checks it, with nothing for the user to configure. Fixes agents that went in circles, burned context, claimed success without proof, duplicated or dropped each other's work, or handed back a document instead of doing the work.
++description: Run a large or long-running job (a batch of 6 or more similar items, fix-all, migration, backfill, audit, recurring check, or resuming a paused job) with a frozen scope, an oracle written red first, a per-item ledger and a gate script that decides completion. Not for single task cards.
+ ---
+ 
+ # Loop Contract
++
++## OpenCode team host notes (kit patch, read first)
++
++This copy is adapted from hdkhosravian/loop-contract-skill (commit 9d13d9a). Differences from the text below:
++- Run state lives in `.opencode/loops/<job-slug>/` (the text says `.claude/loops`; read it as this path). Only `tech-lead` writes there; `developer` cannot.
++- Scripts run in place: `python3 ~/.config/opencode/skills/loop-contract/scripts/fold_ledger.py ...`. Never copy them into the project.
++- The workers are the team: each item is implemented as a task card by `developer` (or `developer-strong` for T2) with red-green per item, reviewed by `reviewer`, and facts come from `explore`. No other subagents; workers never spawn workers; writes stay single-threaded.
++- Task cards from this job use the normal card header and `scripts/board.sh`; the ledger adds the per-item proof, it does not replace the cards.
++- `ScheduleWakeup`, `CronCreate`, `/loop`, `/plugin` and Claude memory do not exist here. To pause: update `PROGRESS.md` Now and `INDEX.md`, say the run is PAUSED with counts, and tell the user to say "continue".
++- Triage step 0 routes only among the team's lanes (card, hard card, slice, this contract); skip surveys of plugins and skills.
++- Read `references/*` only when the branch needs them. Do not load all of them.
++- Serial only: wherever the text offers parallel items or parallel workers, choose serial (one writer at a time).
++- Workers (`developer`, `reviewer`, `explore`) return their result as text; only `tech-lead` writes ledger, INDEX and verdict files, so ledger rows come from the cards' reports and `git log`, not from workers.
++- `--oracle-cmd` / proof commands: use the project's `scripts/check.sh` (whole gate) or one specific test command; they run on the host with no extras.
++- Anywhere the text says `.claude/` (including references), read `.opencode/`. Loop state under `.opencode/loops/` is committed with the project (it is the audit trail); if it is gitignored in this repo, say so in the report.
++- Needs `python3` on the PATH (the setup script checks it); if it is missing, say so and fall back to the normal card lane.
+ 
+ ## What this skill produces
+ 
+@@ -105,10 +121,10 @@
+ the user which job they mean. Look on disk first:
+ 
+ ```
+-cat .claude/loops/INDEX.md 2>/dev/null || ls -d .claude/loops/*/ 2>/dev/null
++cat .opencode/loops/INDEX.md 2>/dev/null || ls -d .opencode/loops/*/ 2>/dev/null
+ ```
+ 
+-Loops live in `.claude/loops/<job-slug>/`, and `INDEX.md` says which are in flight. (Also check the
++Loops live in `.opencode/loops/<job-slug>/`, and `INDEX.md` says which are in flight. (Also check the
+ project's Claude memory for a paused-loop note, and fall back to
+ `rg --files -g 'scope.jsonl'` for a spine left somewhere else by an older run.)
+ 
+@@ -249,7 +265,7 @@
+   only if they will resume in a different repo or on another machine.)
+ 
+ Then leave two durable traces, because the next session starts with none of this context: update
+-`.claude/loops/INDEX.md` with the loop's state, and — if the project has Claude memory — write one
++`.opencode/loops/INDEX.md` with the loop's state, and — if the project has Claude memory — write one
+ `project`-type memory naming the slug, what remains, and that "continue" resumes it. A paused loop
+ nobody can find is indistinguishable from an abandoned one. Delete that memory when the loop completes.
+ 
+@@ -335,7 +351,7 @@
+ 
+ 1. Replace the placeholders — list them explicitly, by name. Unreplaced placeholders get silently
+    guessed by the target agent and every downstream finding is built on the guess.
+-2. Put the file **in the repo** at `.claude/loops/<job-slug>/LOOP.md`, beside its spine, rather than
++2. Put the file **in the repo** at `.opencode/loops/<job-slug>/LOOP.md`, beside its spine, rather than
+    pasting it. Not `docs/` — this is tooling state, not documentation someone should read as prose.
+ 3. Open the session with: `Read <path> and execute it. Do not summarise it. First action per §7.`
+ 
+--- a/references/agent-comms.md
++++ b/references/agent-comms.md
+@@ -52,7 +52,7 @@
+ 
+ ## The board
+ 
+-Four files beside the spine in `.claude/loops/<job>/`, all append-only under **partitioned writes**:
++Four files beside the spine in `.opencode/loops/<job>/`, all append-only under **partitioned writes**:
+ `brief.md` and `bulletin.jsonl` are orchestrator-only; in `claims.jsonl` and `messages.jsonl` every
+ agent appends its own rows only. No row is ever edited; no two writers ever own one row's truth.
+ 
+--- a/references/contract-template.md
++++ b/references/contract-template.md
+@@ -67,19 +67,19 @@
+ 
+ ## 2. SPINE (persistent state — your context is disposable, this is not)
+ 
+-**The spine lives at `.claude/loops/<job-slug>/`** — tooling state, not project documentation. Do not
++**The spine lives at `.opencode/loops/<job-slug>/`** — tooling state, not project documentation. Do not
+ put it in `docs/` or a top-level `audit/`: it is scratch for this run, it should not be mistaken for
+ something a human wrote, and it should not collide with the project's own directories.
+ 
+-**But the spine is not the deliverable, and they go in different places.** `.claude/` is gitignored in
++**But the spine is not the deliverable, and they go in different places.** `.opencode/` may be gitignored in
+ most repos, which is right for scratch and wrong for anything the user wants to keep. So:
+ 
+ | | goes to | why |
+ |---|---|---|
+-| `scope.jsonl`, `ledger.jsonl`, `verdicts.jsonl`, `PROGRESS.md`, `LOOP.md` | `.claude/loops/<slug>/` | run state; disposable once the job is done; must survive compaction, not review |
++| `scope.jsonl`, `ledger.jsonl`, `verdicts.jsonl`, `PROGRESS.md`, `LOOP.md` | `.opencode/loops/<slug>/` | run state; disposable once the job is done; must survive compaction, not review |
+ | the **DELIVERABLE** named in §0 — the review, the report, the plan, the code | wherever the user keeps that kind of thing (`docs/`, the repo tree, a path they named) | it is the point of the run and must outlive it |
+ 
+-Check whether `.claude/` is gitignored (`git check-ignore -q .claude && echo scratch-only`). If it is,
++Check whether `.opencode/loops` is gitignored (`git check-ignore -q .opencode/loops && echo scratch-only`). If it is,
+ say so when you deliver, and never leave the only copy of a deliverable inside it. Never *move* already
+ tracked artifacts into a gitignored directory — that deletes them from the project's history.
+ 
+@@ -87,7 +87,7 @@
+ `auth-migration`), so a continuation of that job lands in the same place — which is the only reason
+ resume works at all. A fresh directory per `/loop-contract` call would orphan every paused run.
+ 
+-**Before creating one, check `.claude/loops/`.** A request belongs to an **existing** loop if any of:
++**Before creating one, check `.opencode/loops/`.** A request belongs to an **existing** loop if any of:
+ - it is continuation-shaped ("continue", "what's left", "finish it"); or
+ - it names the same subject as a loop whose scope still has unfinished items; or
+ - its scope would overlap that loop's frozen scope.
+@@ -99,8 +99,8 @@
+ 
+ **Never vendor the scripts.** Call the copy that ships with this skill — `scripts/fold_ledger.py`,
+ alongside `SKILL.md` — resolved from wherever the skill is installed. That differs by install method
+-(`~/.claude/skills/<name>/` for a manual install, the plugin cache for a `/plugin install`), so resolve
+-it rather than hardcoding either. Copies drift: a repo has been observed running two different
++(on the OpenCode team kit it is `~/.config/opencode/skills/loop-contract/scripts/`), so resolve
++it rather than hardcoding. Copies drift: a repo has been observed running two different
+ `fold_ledger.py` versions side by side, so the same ledger passed one gate and failed the other.
+ 
+ First action: check whether `<dir>/PROGRESS.md` already exists.
+@@ -112,11 +112,11 @@
+ - If not, create `<dir>/`.
+ 
+ ```
+-.claude/loops/
++.opencode/loops/
+   INDEX.md           # one line per loop: slug · mode · delivered/total · state. Rewritten on every
+                      # freeze, pause and completion, so the next session can see what is in flight
+                      # without opening five directories.
+-<dir>/               # = .claude/loops/<job-slug>/
++<dir>/               # = .opencode/loops/<job-slug>/
+   PROGRESS.md        # orientation. rewritten each phase. small.
+   scope.jsonl        # FROZEN before the work. one {id, claim} per task. the job cannot shrink below this.
+   ledger.jsonl       # APPEND-ONLY. one <unit> per line. the unit of work.
+--- a/references/recurring-jobs.md
++++ b/references/recurring-jobs.md
+@@ -64,7 +64,7 @@
+ 1. **Keep the oracle and the scope fixed** between runs. Changing either makes runs incomparable, and
+    a "new" finding is then indistinguishable from a redefined one. If you must change them, say so
+    loudly in that run's report and treat it as a new baseline.
+-2. **Keep the previous ledger.** Store runs as `.claude/loops/<slug>/runs/<date>/`, with `latest`
++2. **Keep the previous ledger.** Store runs as `.opencode/loops/<slug>/runs/<date>/`, with `latest`
+    pointing at the newest. Diff this run's ledger against the previous one by row id.
+ 3. **Report three buckets, not one list**: **new** (absent last run), **fixed** (present last run, gone
+    now — worth celebrating and worth checking the fix was real), and **persisting** (with an age: "open

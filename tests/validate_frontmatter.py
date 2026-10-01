@@ -29,6 +29,13 @@ for pattern in ("global/agents/*.md", "global-v2/agents/*.md", "global/commands/
 # cross references: skills and sub-agents named in agent permissions, command agents, models.conf
 import os
 skills = {os.path.basename(os.path.dirname(p)) for p in glob.glob("global/skills/*/SKILL.md")}
+for line in open("global/team/skills.lock", encoding="utf-8"):  # third-party skills come from git at install time
+    parts = [x.strip() for x in line.split("|")]
+    if line.strip() and not line.startswith("#"):
+        skills.add(parts[0])
+        if len(parts) > 4 and parts[4] and not os.path.exists("global/team/patches/" + parts[4]):
+            bad += 1
+            print(f"FAIL global/team/skills.lock: patch {parts[4]} does not exist")
 agents = {os.path.basename(p)[:-3] for p in glob.glob("global/agents/*.md")} | {"explore", "general", "build", "plan"}
 for path in sorted(glob.glob("global/agents/*.md")):
     perm = fm(path).get("permission", {})
@@ -39,7 +46,7 @@ for path in sorted(glob.glob("global/agents/*.md")):
                 print(f"FAIL {path}: permission.{kind} names '{name}', which does not exist")
 for path in sorted(glob.glob("global/commands/*.md")):
     a = fm(path).get("agent")
-    if a not in agents:
+    if a is not None and a not in agents:
         bad += 1
         print(f"FAIL {path}: agent '{a}' does not exist")
 try:

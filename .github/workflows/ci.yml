@@ -4,7 +4,11 @@ on:
   pull_request:
 jobs:
   kit:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -13,49 +17,46 @@ jobs:
       - run: pip install pyyaml
       - name: shell syntax
         run: |
+          bash -n setup.sh
           bash -n setup.command
           bash -n global/team/bootstrap.sh
-          for f in global/team/project-template/scripts/*.sh; do bash -n "$f"; done
-      - name: agent, command and skill frontmatter
+          bash -n global/team/fetch-skills.sh
+          for f in global/team/project-template/scripts/*.sh tests/board/run.sh tests/fetch_skills/run.sh; do bash -n "$f"; done
+      - name: agent, command and skill frontmatter, cross references
         run: python3 tests/validate_frontmatter.py
       - name: global and global-v2 are generated from models.conf
         run: |
           python3 tools/gen_v2.py
           git diff --exit-code -- global global-v2
           test -z "$(git status --porcelain)"
-      - name: models.py (show, apply, set) tests
+      - name: models.py (show, set, preset, reset, /model command, apply)
         run: |
           python3 -W error tests/test_models.py
           python3 global/team/models.py show --conf models.conf
       - name: board.sh verify negative tests
         run: bash tests/board/run.sh
-      - name: loop-contract gate runs
-        run: python3 global/skills/loop-contract/scripts/fold_ledger.py --help
-  real-opencode:
-    # installs the real OpenCode (V1 and V2) and runs the permission and model checks against what it resolves.
+      - name: fetch-skills.sh (local git repository as the upstream)
+        run: bash tests/fetch_skills/run.sh
+      - name: third-party skills install from their git repositories and the loop-contract gate runs
+        run: |
+          bash global/team/fetch-skills.sh --dest "$RUNNER_TEMP/skills"
+          python3 "$RUNNER_TEMP/skills/loop-contract/scripts/fold_ledger.py" --help
+  setup-linux:
+    # runs the real installer on Linux for OpenCode 2.x and 1.x: installs OpenCode, applies models.conf, fetches the
+    # skills from git, resolves every agent, and checks 170 permission cases against what OpenCode computed.
     # Depends on opencode.ai being reachable, so a failure here is a warning, not a blocker.
     runs-on: ubuntu-latest
     continue-on-error: true
+    strategy:
+      matrix:
+        major: ["2", "1"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: OpenCode 2.x, V2 config
+      - name: bash setup.sh (OpenCode ${{ matrix.major }}.x)
         run: |
-          curl -fsSL https://opencode.ai/v2/install | bash
-          export PATH="$HOME/.opencode/bin:$PATH"
-          mkdir -p ~/.config/opencode
-          cp -R global/. ~/.config/opencode/ && cp -R global-v2/. ~/.config/opencode/
-          opencode debug agents > agents.json
-          python3 global/team/models.py verify agents.json --conf models.conf
-          python3 tests/perm_check.py agents.json
-      - name: OpenCode 1.x, V1 config
-        run: |
-          rm -rf ~/.opencode ~/.config/opencode ~/.local/share/opencode
-          curl -fsSL https://opencode.ai/install | bash
-          export PATH="$HOME/.opencode/bin:$PATH"
-          mkdir -p ~/.config/opencode agents1
-          cp -R global/. ~/.config/opencode/
-          for a in lead tech-lead developer developer-strong reviewer reporter; do opencode debug agent "$a" > "agents1/$a.json"; done
-          python3 tests/perm_check.py --v1 agents1
+          OPENCODE_MAJOR=${{ matrix.major }} bash setup.sh
+          grep -E "SETUP RESULT" setup.log
+          ! grep -E "^\s+FAIL" setup.log

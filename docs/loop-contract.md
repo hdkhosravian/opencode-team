@@ -17,7 +17,7 @@ Run state lives in `.opencode/loops/<job-slug>/`. Each item is still implemented
 
 ## Changes made for OpenCode
 
-The skill is copied from the upstream repository (MIT) with these differences, all documented in a "host notes" block at the top of `SKILL.md`:
+The skill is not stored in this kit. `skills.lock` pins [its git repository](https://github.com/hdkhosravian/loop-contract-skill) (MIT) at a commit; `setup.sh` (or `team/fetch-skills.sh`) clones it, applies `team/patches/loop-contract-opencode.patch` and installs it into `~/.config/opencode/skills/loop-contract`. The patch makes these differences, documented in a "host notes" block at the top of `SKILL.md`:
 
 - State path is `.opencode/loops/` instead of `.claude/loops/`, in `SKILL.md` and in the references. It is committed as the audit trail.
 - The description is shortened to about 300 characters so the standing prompt stays small.
@@ -27,7 +27,7 @@ The skill is copied from the upstream repository (MIT) with these differences, a
 - Triage routes only among the team's lanes.
 - It needs `python3`. If Python is missing, the tech lead says so and falls back to the card lane.
 
-`fold_ledger.py` and `extract_requirements.py` are untouched.
+`fold_ledger.py` and `extract_requirements.py` are untouched. To move to a newer upstream commit, change the ref in `skills.lock`; `fetch-skills.sh` reports if the patch no longer applies.
 
 ## Pinned permission
 
