@@ -84,8 +84,8 @@ $(awk '/^## (Now|Open decisions)/{p=1} /^## Lessons/{p=0} p' PROGRESS.md 2>/dev/
       else ROUTE=REPLY; REPLY="This project is not initialized yet. Run /team (it initializes the project)."; fi ;;
     init|setup)    ROUTE=INIT ;;
     review)        ROUTE=REVIEW; ARG="$rest" ;;
-    all|auto|continue|go)
-      AUTO=yes
+    all|auto|continue|go)  # "go" resumes one unit; the other three also switch auto mode on
+      case "$word" in go) ;; *) AUTO=yes ;; esac
       if [ "$INIT" = 1 ]; then resume_route; else ROUTE=INIT; fi ;;
   esac
 fi

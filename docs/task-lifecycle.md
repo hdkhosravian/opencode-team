@@ -4,7 +4,20 @@ One principle: **the state of a task lives in the task's own card, and only the 
 
 ## 0. The entry point: /team
 
-`/team` is the one command that starts all of this. `team/route.sh` (a script, no model tokens) reads the files and prints a state block and a ROUTE for an empty `/team`. What you type is never put into a shell line (OpenCode 2.x pastes it in raw, so a quote or a backtick would break or run it): the tech lead sees it as plain text and maps it to a route with a short table. The routes are: `INIT` (project not set up), `RESUME` (a card is `doing`), `NEXT-CARD` (a ready `todo` card), `EPIC` (an epic with unticked slices), `CARD` (you typed a card id or path), `WORK` (free text), `KICKOFF` (free text, nothing planned and no product docs: a new product), `REVIEW`, `BLOCKED`, `DONE`, or `REPLY` (status, model changes and errors are answered by the script itself). The tech lead then follows the route with the delivery loop below, calling `lead` only for `KICKOFF` and T3 decisions. The state comes from the files; the lane for `WORK` is chosen by the tech lead (next section). `/team all` repeats the unit of work, stopping at 4 slices, a blocked card, an open decision, or when the epic is done.
+`/team` is the one command that starts all of this ([commands.md](commands.md) has the details). A script, `team/route.sh` (no model tokens), reads the files and prints a state block and the route an **empty** `/team` takes:
+
+| Route | Meaning |
+|---|---|
+| `INIT` | the project is not set up yet |
+| `RESUME` | a card is `doing`: unfinished work |
+| `NEXT-CARD` | a `todo` card has all its dependencies done |
+| `EPIC` | an epic has unticked slices |
+| `KICKOFF` | product docs exist but no epics |
+| `BLOCKED` | only blocked cards, or cards waiting on blocked ones, remain |
+| `DONE` | every epic is delivered |
+| `REPLY` / `STOP` | nothing planned yet / not a git repository |
+
+What you type is never put into a shell line (OpenCode 2.x pastes it in raw, so a quote or a backtick would break or run it). The tech lead sees it as plain text and maps it to a route with a short table: a card id or path is `CARD`, an epic id or path is `EPIC`, `review` is `REVIEW`, free text is `WORK` (or `KICKOFF` when `planned: no`, meaning no epics, cards or product docs). It then follows the route with the delivery loop below, calling `lead` only for `KICKOFF` and T3 decisions. The lane for `WORK` is chosen by the tech lead (next section). `/team all` repeats the unit of work, stopping at 4 slices, a blocked card, an open decision, or when the epic is done.
 
 ## 1. Pick a lane
 
@@ -17,7 +30,7 @@ The tech lead chooses the cheapest lane that is safe. If it is unsure between tw
 | **Hard card** | T2 (auth, payments, data loss, migrations, concurrency, security) or Gemini failed for capability reasons | `Dev: developer-strong`, always reviewed, and the tech lead reads the diff of the risky files |
 | **Slice** | An epic slice made of several cards | Cards taken in order with `board.sh next`, one developer at a time |
 | **Batch** | 6+ similar items, "fix all", migration, backfill, audit, anything that must survive a pause | Load `loop-contract` ([docs](loop-contract.md)); its gate decides completion. Each item is still a normal card |
-| **T3** | Architecture decisions | Needs an ADR from `lead` first |
+| **T3** | Architecture decisions and new product direction | The tech lead calls `lead` once (it writes the ADR, brief and epics, then stops); delivery starts after that |
 
 Risk tiers: **T0** mechanical, **T1** normal, **T2** high-risk, **T3** architectural.
 
@@ -122,11 +135,11 @@ After a BLOCK and a fix, one re-review of the fix commits only. A second BLOCK m
 
 ## 7. New projects
 
-The first card is `000-scaffold` (T0): skeleton, test framework, linter, folder layout. It is exempt from red-first and from the gate (there is no gate yet); the developer proves the runner and linter work with one green sample test. The tech lead then writes `.opencode/check.cmds`, runs `scripts/check.sh` once, and only then closes card 000.
+`/team` sets a new project up first (the `INIT` route: bootstrap, `AGENTS.md`, the gate commands). Then the first card is `000-scaffold` (T0): skeleton, test framework, linter, folder layout. It is exempt from red-first and from the gate (there is no gate yet); the developer proves the runner and linter work with one green sample test. The tech lead then writes `.opencode/check.cmds`, runs `scripts/check.sh` once, and only then closes card 000.
 
 ## 8. Pausing and resuming
 
-State is in the cards, so nothing is lost when the terminal closes or the context is compacted. Tell the tech lead to continue: it runs `board.sh`, finds the `doing` card, reads `git log --oneline -5`, runs the gate, and carries on.
+State is in the cards, so nothing is lost when the terminal closes or the context is compacted. Run `/team` again (or tell the tech lead to continue): it runs `board.sh`, finds the `doing` card, reads `git log --oneline -5`, runs the gate, and carries on.
 
 ## 9. Epics
 

@@ -31,7 +31,8 @@ P1="$(mkproj empty)"
 check "initialized, nothing planned: tells you" "$P1" '^ROUTE: REPLY' 
 check "...with a clear reply"                   "$P1" 'Nothing is planned yet'
 check "new idea in an empty project: kickoff"   "$P1" '^ROUTE: KICKOFF  build a todo app' build a todo app
-check "all/auto with nothing planned"           "$P1" 'auto: yes' all
+check "all switches auto mode on"               "$P1" 'auto: yes' all
+check "go resumes one unit (auto stays off)"    "$P1" 'auto: no' go
 check "status keyword is answered by the script" "$P1" 'REPLY-BEGIN' status
 check "review keyword keeps the range"          "$P1" '^ROUTE: REVIEW  HEAD~1..HEAD' review HEAD~1..HEAD
 check "models keyword is a script answer"       "$P1" '^ROUTE: REPLY' models
@@ -55,7 +56,7 @@ check "status shows the board"                  "$P4" 'BOARD cards 6' status
 check "state block has the board"               "$P4" '^ +003 doing'
 sed -i.bak 's/^Status: doing/Status: todo/' "$P4/.opencode/work/tasks/003-refund.md"; rm -f "$P4/.opencode/work/tasks/003-refund.md.bak"
 check "nothing doing, a ready card: next card"  "$P4" '^ROUTE: NEXT-CARD  .opencode/work/tasks/00[0-9]-'
-check "auto resumes the same way"               "$P4" 'auto: yes' go
+check "auto resumes the same way"               "$P4" 'auto: yes' auto
 
 # the typed text is data: it is never executed or expanded
 touch "$P4/sentinel"

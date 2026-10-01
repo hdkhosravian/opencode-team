@@ -15,7 +15,7 @@ Six or more similar items, "fix all of them", a migration, a backfill, an audit,
 
 Run state lives in `.opencode/loops/<job-slug>/`. Each item is still implemented as a normal task card by `developer` (or `developer-strong`), reviewed by `reviewer`; the ledger adds the proof, it doesn't replace the cards or `board.sh`.
 
-## Changes made for OpenCode
+## Installation and changes made for OpenCode
 
 The skill is not stored in this kit. `skills.lock` pins [its git repository](https://github.com/hdkhosravian/loop-contract-skill) (MIT) at a commit; `setup.sh` (or `team/fetch-skills.sh`) clones it, applies `team/patches/loop-contract-opencode.patch` and installs it into `~/.config/opencode/skills/loop-contract`. The patch makes these differences, documented in a "host notes" block at the top of `SKILL.md`:
 
@@ -31,4 +31,4 @@ The skill is not stored in this kit. `skills.lock` pins [its git repository](htt
 
 ## Pinned permission
 
-The tech lead may run exactly `python3 <skills dir>/loop-contract/scripts/fold_ledger.py ...`, not arbitrary Python.
+The tech lead may run exactly `python3 <skills dir>/loop-contract/scripts/fold_ledger.py ...`, not arbitrary Python. How skills are fetched, pinned and patched in general: [skills.md](skills.md).

@@ -4,9 +4,9 @@ Where the tokens go in a multi-agent coding setup, and how this kit closes each 
 
 ## 1. Spend the expensive model only on decisions
 
-- **The default agent is `tech-lead` (Sonnet), not Opus.** Daily work never reaches Opus; `lead` is for `/kickoff` and genuinely hard decisions.
+- **The default agent is `tech-lead` (Sonnet), not Opus.** Daily work never reaches Opus. `lead` is called only for a new product (`/kickoff`, or `/team <idea>` when nothing is planned) and for T3 decisions, and only the tech lead can call it.
 - **Opus never reads code or diffs.** It asks `explore` (Gemini) one precise question and gets a short answer, and from the tech lead it gets a report of at most 30 lines.
-- **Background agents run on Gemini:** `explore`, `general`, title generation and context compaction. They get called silently and often, so they must be cheap.
+- **Background agents run on the `BACKGROUND` model (Gemini by default):** `explore`, `general`, title generation, summaries, context compaction, `reporter` and the `/model` command. They get called silently and often, so they must be cheap. Change the model of any role with `/model` ([models.md](models.md)).
 
 ## 2. Hand off by file, not by chat
 
@@ -18,19 +18,21 @@ Where the tokens go in a multi-agent coding setup, and how this kit closes each 
 
 - `scripts/board.sh` prints about 20 lines and costs zero tokens. The model never opens cards to summarize them.
 - `scripts/check.sh` prints only the **last 40 lines of a failing step**, and one line (`PASS name`) for each passing one.
-- `/status` runs on Gemini and only reads the board and `PROGRESS.md`.
+- `/status` runs on the background model and only reads the board and `PROGRESS.md`.
+- `/team` computes its state with `team/route.sh`, a script: finding out what to do next (is the project set up, which card is in progress, which epic has open slices) costs no model tokens. The command template adds about 700 tokens, only when you use it.
 - Shared reading rules in `AGENTS.md`: search first (grep or glob), then read only the needed line range; pipe long output through `tail -40`; evidence is `path:line`.
 
 ## 4. Keep the standing prompt small and stable
 
 - **Per-agent skill lists.** Skill descriptions ride along in the prompt on every turn. The reviewer sees 3 skills, not 14, and `loop-contract` is visible to the tech lead only.
 - **`loop-contract`'s description is trimmed** from about 1,400 to about 300 characters. Its full body (around 10k tokens) loads only when a job really is a batch.
-- **Prompts are short and constant** (roughly 700 to 1,700 tokens each; the tech lead is the largest because the task loop lives in it), which also helps prompt caching.
+- **Prompts are short and constant** (about 80 tokens for `reporter`, 250 for `reviewer`, 470 for the developers, 650 for `lead`, 1,600 for the tech lead, which is the largest because the task loop lives in it), which also helps prompt caching. Commands add to the prompt only while they run (`/team` about 700 tokens, the others under 200).
 - **Everything is in English.** Persian or other non-Latin text costs 2 to 3 times the tokens, and models follow English instructions more precisely. You can still talk to the agents in your own language.
 
 ## 5. Hard ceilings
 
-- **Step limits:** lead 40, tech-lead 80, reviewer 30, developers 80.
+- **Step limits:** lead 40, tech-lead 80, reviewer 30, developers 80, reporter 8.
+- **`/team all` is bounded:** at most 4 slices per call, and it stops at a blocked card or an open decision.
 - **Attempt caps per card:** 3 runs for `developer`, 2 for `developer-strong`, then `blocked`. The count is written in the card, so context compaction can't lose it and a retry loop can't run away.
 - **One review round after a BLOCK**, never a third; PASS WITH NOTES triggers none.
 - **One integration review per epic**, not one per card on top of the card reviews.
