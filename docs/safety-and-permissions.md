@@ -30,7 +30,7 @@ OpenCode evaluates permission rules in order and the **last matching rule wins**
 
 ## Subagents and skills
 
-Each agent can call only the sub-agents it needs (`lead` → `tech-lead`, `explore`; `tech-lead` → `developer`, `developer-strong`, `reviewer`, `explore`; developers and reviewer → none), and load only its own skills. Sub-agent depth is capped at 2.
+Each agent can call only the sub-agents it needs (`lead` → `tech-lead`, `explore`; `tech-lead` → `developer`, `developer-strong`, `reviewer`, `explore`, `lead`; developers and reviewer → none), and load only its own skills. Sub-agent depth is capped at 2.
 
 ## Project bootstrap
 

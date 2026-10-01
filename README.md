@@ -144,7 +144,25 @@ DEVELOPER=google/gemini-3.8-flash#high      # provider/model#reasoning-level
 
 Edit that file and run `bash setup.sh` again to change the defaults. Each provider needs `/connect`. `models.py` warns when the reviewer and a developer share a provider (a reviewer from the same family shares the author's blind spots). Details in [docs/customizing.md](docs/customizing.md).
 
-## Commands
+## One command: /team
+
+Type `/team` and the team works out the rest. A script (no model tokens) reads the project and computes the state; the tech lead picks the route from that state and what you typed, then does the work and calls `lead`, `developer`, `developer-strong`, `reviewer` and `explore` as needed.
+
+| You type | What happens |
+|---|---|
+| `/team` | Resumes: the card in progress, the next ready card, or the next slice of the open epic. A project that is not set up yet is set up first. |
+| `/team build a todo app` | Nothing is planned yet: the tech lead calls `lead` (Opus) for the brief, domain notes, ADRs and epics, then delivers the first slice. |
+| `/team fix the login redirect` | The tech lead picks the lane (trivial, card, hard card, slice, batch) and does it. |
+| `/team EPIC-01`, `/team 3`, or a file path | Delivers the next slice of that epic, or runs that card. |
+| `/team all` | Keeps going slice after slice. Stops at 4 slices, a blocked card, an open decision, or when the epic is done. |
+| `/team review [range]` | Reviews the current changes, or a commit range. |
+| `/team status` | The board and `PROGRESS.md`. |
+| `/team model developer openai/gpt-5.4-nano` | Same as `/model` below. |
+| `/team init` | Sets up (or refreshes) the project files. |
+
+One call does one unit of work (a card or a slice), so every call starts with a fresh context and a paused session loses nothing: run `/team` again to continue. The route is derived from the files, never guessed from your words: free text is always handed to the tech lead, who chooses the lane.
+
+The older commands still work as shortcuts that force one route:
 
 | Command | Agent | Does |
 |---|---|---|
@@ -153,10 +171,10 @@ Edit that file and run `bash setup.sh` again to change the defaults. Each provid
 | `/epic <epic path>` | tech-lead | Delivers the **next slice** of an epic; run again to continue |
 | `/task <description or card path>` | tech-lead | One feature or fix through the pipeline |
 | `/review` | reviewer | Review current changes |
-| `/model` | reporter (background model) | Show or change the models, apply a preset |
+| `/model` | current agent, background model | Show or change the models, apply a preset |
 | `/status` | reporter (background model) | Board and `PROGRESS.md` summary, read-only, no Claude tokens |
 
-`Tab` switches between `lead` and `tech-lead`. After any pause, tell the tech lead to continue: it reads the board and resumes from the unfinished card.
+`Tab` switches between `lead` and `tech-lead` if you want to talk to one directly. Only the tech lead can call `lead` (it is the most expensive agent; every other agent is denied).
 
 ## Token strategy in one screen
 
@@ -196,7 +214,7 @@ Developers can't edit acceptance tests, docs, `.opencode/`, `.github/`, the gate
 
 CI runs on Linux and macOS: `models.py` (set, preset, reset, `/model`, apply for V1 and V2), `fetch-skills.sh` against a git repository, the 22 `board.sh verify` cases (GNU and BSD `sed`, Linux and macOS awk), frontmatter and cross references (skills, sub-agents, roles), and a check that `global-v2/` is regenerated from `models.conf`. A second job runs `setup.sh` for real on Linux with OpenCode 2.x and 1.x.
 
-`setup.sh` validates every install against the real OpenCode (1.18.34 and 2.0.21): the config resolves, each agent gets the model and variant from `models.conf`, 170 permission cases (edit, shell, read, skill, sub-agent, webfetch for all six agents) pass on the rules OpenCode computed (`tests/perm_check.py`), and `check.sh`, `board.sh` and the `loop-contract` gate run. Issues and PRs are welcome.
+`setup.sh` validates every install against the real OpenCode (1.18.34 and 2.0.21): the config resolves, each agent gets the model and variant from `models.conf`, 180 permission cases (edit, shell, read, skill, sub-agent, webfetch for all six agents) pass on the rules OpenCode computed (`tests/perm_check.py`), and `check.sh`, `board.sh` and the `loop-contract` gate run. Issues and PRs are welcome.
 
 ## Documentation
 

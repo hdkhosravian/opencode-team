@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0 - one command
+
+- **`/team`**: one entry point for the whole pipeline. `global/team/route.sh` (no model tokens) reads the project and prints its state and the route for an empty `/team` (init, resume, next card, epic slice, kickoff, blocked, done); the tech lead maps what you typed to a route (card, epic, work, kickoff, review, status, model, init) with a short table. Typed text never goes into a shell line: OpenCode 2.x pastes it in raw, and a quote or backtick would break or run it (checked against the real 2.x API). `/team` resumes; `/team <request>` picks the lane, or kicks off a new product through `lead` when nothing is planned; `/team EPIC-01`, `/team 3` or a path run an epic slice or a card; `/team all` continues slice after slice (stops at 4 slices, a blocked card, an open decision, or when the epic is done); `review`, `status`, `model` and `init` are handled too. The older commands stay as shortcuts.
+- The tech lead may now call `lead` (new products, T3 decisions). Every other agent, built-in ones included, is denied: a global `task` deny for `lead` is overridden only by the tech lead's own rule. `lead` is mode `all` and, when called by the tech lead, writes its artifacts and stops. The tech lead initializes an uninitialized project itself instead of asking the user to run `/team-init`.
+- 10 more permission cases (180 in total) cover the `lead` and `models.py cmd` rules; `tests/route/run.sh` covers the router (26 cases, including that typed text is never executed or expanded).
+
 ## 0.4.0 - Linux, skills from git, /model
 
 - **Linux and macOS.** `setup.sh` is the installer (`setup.command` is now a double-click wrapper for macOS). It no longer needs macOS tools: the model-ID check uses `models.py` instead of `osascript`, time limits use `timeout`, `gtimeout` or `perl`, the PATH line goes to the rc file of your shell, and the config folder follows `XDG_CONFIG_HOME`. CI runs the kit checks on Ubuntu and macOS, plus a job that runs `setup.sh` for real on Linux.

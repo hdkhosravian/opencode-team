@@ -15,6 +15,10 @@ you ──► lead (Opus)         decides what and why        ← most expensive
 
 Information flows down as **file paths** and back up as **short structured reports**. Nothing is passed as a pasted summary, which keeps each hand-off small and lets any agent restart from the files after a context reset.
 
+## One entry point
+
+`/team` (see [task-lifecycle.md](task-lifecycle.md#0-the-entry-point-team)) is a thin layer over the three layers above: a script derives the route from the project files, and the tech lead (the default agent) executes it. `lead` is mode `all` so the tech lead can call it for a new product or a T3 decision; a global `task` deny for `lead` keeps every other agent, built-ins included, from calling the most expensive model. Free typing to the tech lead works the same way; the command only adds the computed state.
+
 ## Roles are not agents
 
 Product manager, domain architect and planner are three *hats* of one agent (`lead`), not three Opus agents. A separate agent means rebuilding context and losing detail at each hand-off, so a new agent exists only where one of these differs: the model, the permissions, or the need for an isolated context.

@@ -67,6 +67,9 @@
       "~/.config/opencode/**": "allow",
       "*/.config/opencode/**": "allow"
     },
+    "task": {
+      "lead": "deny"
+    },
     "bash": {
       "*": "ask",
       "git status*": "allow",

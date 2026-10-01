@@ -62,9 +62,13 @@ CASES = [
         ("scripts/board.sh verify", A), ("scripts/check.sh", A), ("npm test", A), ("pytest -q", A),
         ("python3 ~/.config/opencode/skills/loop-contract/scripts/fold_ledger.py --help", A),
         ("python3 /Users/x/.config/opencode/skills/loop-contract/scripts/fold_ledger.py check", A),
+        ("python3 ~/.config/opencode/team/models.py cmd developer openai/gpt-5.4-nano", A),
+        ("python3 /Users/x/.config/opencode/team/models.py cmd reset", A), ("python3 /Users/x/.config/opencode/team/models.py apply", K),
         ("python3 evil.py", K), ("bash ~/.config/opencode/team/bootstrap.sh", A), ("bash evil.sh", K), ("git mv src/a.ts src/b.ts", K),
         ("git push", D), ("git reset --hard", D), ("git clean -fd", D), ("rm -rf x", D), ("sudo ls", D), ("curl https://x.dev", K)]],
-    *[("tech-lead", "subagent", r, e) for r, e in [("developer", A), ("developer-strong", A), ("reviewer", A), ("explore", A), ("lead", D), ("reporter", D)]],
+    *[("tech-lead", "subagent", r, e) for r, e in [("developer", A), ("developer-strong", A), ("reviewer", A), ("explore", A), ("lead", A), ("reporter", D)]],
+    # only the tech lead may call the lead (the most expensive agent); nothing else can, built-in agents included
+    *[(a, "subagent", "lead", D) for a in ("reviewer", "reporter", "developer", "developer-strong", "lead", "general", "explore")],
     *[("tech-lead", "skill", r, e) for r, e in [("task-card", A), ("acceptance-tests", A), ("loop-contract", A), ("escalation-brief", A), ("product-brief", D), ("tdd-cycle", D)]],
     # reporter (/status): only the board
     ("reporter", "edit", "PROGRESS.md", D), ("reporter", "edit", ".opencode/work/tasks/001-x.md", D),

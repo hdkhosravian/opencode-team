@@ -16,7 +16,7 @@
 - Gate commands `.opencode/check.cmds`. Frozen acceptance tests `tests/acceptance/` (tests of a blocked card wait in `tests/blocked/NNN/`).
 - Commits: `type(NNN): subject`, NNN = card number (`feat|fix|refactor|perf|chore` by the developer, `test|docs` by the tech lead). Trivial lane: plain `chore: ...` or `fix: ...`.
 - developer and reviewer: read only what your task card and prompt point to.
-- If `PROGRESS.md` is missing, the project is not initialized: tell the user to run `/team-init`.
+- If `PROGRESS.md` is missing, the project is not initialized: tell the user to run `/team` (it initializes the project and then does the work).
 
 ## Context rules (every agent)
 - Search before reading: grep or glob for the symbol, then read only the needed line range. Never open a whole large file or list a whole tree to "get oriented".

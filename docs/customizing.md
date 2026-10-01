@@ -98,7 +98,7 @@ python3 tests/validate_frontmatter.py   # frontmatter, plus skills, sub-agents a
 bash tests/board/run.sh                 # board.sh verify negative tests (GNU and BSD sed)
 python3 tests/test_models.py            # models.py, presets, /model, models.conf
 bash tests/fetch_skills/run.sh          # fetch-skills.sh against a local git repository
-python3 tests/perm_check.py             # 170 permission checks on what a real OpenCode 2.x resolved (needs `opencode`)
+python3 tests/perm_check.py             # 180 permission checks on what a real OpenCode 2.x resolved (needs `opencode`)
 # OpenCode 1.x: mkdir d; for a in lead tech-lead developer developer-strong reviewer reporter; do opencode debug agent $a > d/$a.json; done
 python3 tests/perm_check.py --v1 d
 ```

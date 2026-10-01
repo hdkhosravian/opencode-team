@@ -85,6 +85,11 @@
       "effect": "allow"
     },
     {
+      "action": "subagent",
+      "resource": "lead",
+      "effect": "deny"
+    },
+    {
       "action": "shell",
       "resource": "*",
       "effect": "ask"

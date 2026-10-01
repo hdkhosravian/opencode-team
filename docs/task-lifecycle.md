@@ -2,6 +2,10 @@
 
 One principle: **the state of a task lives in the task's own card, and only the tech lead changes it.** There is no second file to drift out of sync. Planning (epics and slices) belongs to `lead`, delivery and state to `tech-lead`, implementation to the developers.
 
+## 0. The entry point: /team
+
+`/team` is the one command that starts all of this. `team/route.sh` (a script, no model tokens) reads the files and prints a state block and a ROUTE for an empty `/team`. What you type is never put into a shell line (OpenCode 2.x pastes it in raw, so a quote or a backtick would break or run it): the tech lead sees it as plain text and maps it to a route with a short table. The routes are: `INIT` (project not set up), `RESUME` (a card is `doing`), `NEXT-CARD` (a ready `todo` card), `EPIC` (an epic with unticked slices), `CARD` (you typed a card id or path), `WORK` (free text), `KICKOFF` (free text, nothing planned and no product docs: a new product), `REVIEW`, `BLOCKED`, `DONE`, or `REPLY` (status, model changes and errors are answered by the script itself). The tech lead then follows the route with the delivery loop below, calling `lead` only for `KICKOFF` and T3 decisions. The state comes from the files; the lane for `WORK` is chosen by the tech lead (next section). `/team all` repeats the unit of work, stopping at 4 slices, a blocked card, an open decision, or when the epic is done.
+
 ## 1. Pick a lane
 
 The tech lead chooses the cheapest lane that is safe. If it is unsure between two lanes it takes the lower one; a failed gate or review moves it up.

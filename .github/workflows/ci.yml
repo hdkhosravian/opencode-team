@@ -21,6 +21,7 @@ jobs:
           bash -n setup.command
           bash -n global/team/bootstrap.sh
           bash -n global/team/fetch-skills.sh
+          bash -n global/team/route.sh
           for f in global/team/project-template/scripts/*.sh tests/board/run.sh tests/fetch_skills/run.sh; do bash -n "$f"; done
       - name: agent, command and skill frontmatter, cross references
         run: python3 tests/validate_frontmatter.py
@@ -35,6 +36,8 @@ jobs:
           python3 global/team/models.py show --conf models.conf
       - name: board.sh verify negative tests
         run: bash tests/board/run.sh
+      - name: route.sh (the router behind /team)
+        run: bash tests/route/run.sh
       - name: fetch-skills.sh (local git repository as the upstream)
         run: bash tests/fetch_skills/run.sh
       - name: third-party skills install from their git repositories and the loop-contract gate runs

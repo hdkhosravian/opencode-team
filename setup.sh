@@ -130,7 +130,7 @@ if have_python; then
   ok "models: $(python3 "$CFG/team/models.py" show | awk '/^(LEAD|TECH_LEAD|REVIEWER|DEVELOPER|DEVELOPER_STRONG|BACKGROUND) /{printf "%s=%s ", tolower($1), $2}')"
   python3 "$CFG/team/models.py" show | sed -n 's/^WARN  /  INFO  /p'
 fi
-chmod +x "$CFG/team/bootstrap.sh" "$CFG/team/fetch-skills.sh" "$CFG/team/project-template/scripts/check.sh" "$CFG/team/project-template/scripts/board.sh" "$CFG/team/models.py"
+chmod +x "$CFG/team/bootstrap.sh" "$CFG/team/fetch-skills.sh" "$CFG/team/route.sh" "$CFG/team/project-template/scripts/check.sh" "$CFG/team/project-template/scripts/board.sh" "$CFG/team/models.py"
 # third-party skills (skills.lock) come straight from their git repositories, pinned and patched for OpenCode
 bash "$CFG/team/fetch-skills.sh" --dest "$CFG/skills" 2>&1 | tee "$TMPDIR_SK"
 grep -qE '^  (FAIL|WARN)' "$TMPDIR_SK" && WARN=1
@@ -199,7 +199,7 @@ if [ "$MAJ" = "2" ]; then
 else
   tlimit 30 opencode debug config >/dev/null 2>&1 && echo "  OK    config resolves" || warn "config does not resolve (run: opencode debug config)"
   mkdir -p "$TMP/agents1"
-  for a in lead tech-lead developer developer-strong reviewer explore reporter; do
+  for a in lead tech-lead developer developer-strong reviewer explore general reporter; do
     if tlimit 30 opencode debug agent "$a" > "$TMP/agents1/$a.json" 2>&1; then
       m="$(grep -o '"modelID": *"[^"]*"' "$TMP/agents1/$a.json" | head -1 | cut -d'"' -f4)"
       v="$(grep -o '"variant": *"[^"]*"' "$TMP/agents1/$a.json" | head -1 | cut -d'"' -f4)"
@@ -226,6 +226,7 @@ fi
   echo true > .opencode/check.cmds
   scripts/check.sh >/dev/null 2>&1 && echo "  OK    check.sh runs" || warn "check.sh failed on the smoke project"
   scripts/board.sh verify >/dev/null 2>&1 && [ "$(scripts/board.sh next-id)" = "001" ] && echo "  OK    board.sh runs" || warn "board.sh failed on the smoke project"
+  bash "$CFG/team/route.sh" "build something" 2>&1 | grep -q '^ROUTE: ' && echo "  OK    route.sh runs (the router behind /team)" || warn "route.sh failed on the smoke project"
   GATE="$CFG/skills/loop-contract/scripts/fold_ledger.py"
   if ! have_python; then warn "python3 (3.8+) is missing or only the macOS stub: the loop-contract gate (large batch jobs only) will not run; normal cards are unaffected"
   elif tlimit 20 python3 "$GATE" --help >/dev/null 2>&1; then echo "  OK    loop-contract gate runs (python3 $(python3 -c 'import sys;print("%d.%d"%sys.version_info[:2])' 2>/dev/null))"
