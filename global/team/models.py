@@ -214,17 +214,34 @@ def warnings(conf):
     return out
 
 
+def opencode_models():
+    """Model IDs OpenCode itself lists (`opencode models`): covers models that plugins add and models.dev does not know."""
+    import shutil, subprocess
+    exe = shutil.which("opencode") or os.path.expanduser("~/.opencode/bin/opencode")
+    if not os.path.exists(exe):
+        return set()
+    try:
+        out = subprocess.run([exe, "models"], capture_output=True, text=True, timeout=90, stdin=subprocess.DEVNULL).stdout
+    except Exception:
+        return set()
+    return {l.strip() for l in out.splitlines() if re.match(r"^[A-Za-z0-9_.-]+/\S+$", l.strip())}
+
+
 def cmd_check(conf):
     cat = fetch_catalog()
     if cat is None:
         print("could not download the models.dev catalog; nothing checked")
         return 2
     bad = 0
+    cache = {}
+    listed_models = lambda: cache.setdefault("m", opencode_models())
     for value in dict.fromkeys(split(v)[0] for v in conf.values()):
         prov, _, model = value.partition("/")
         models = cat.get(prov, {}).get("models", {})
         if model in models:
             print(f"  OK    {value}")
+        elif value in (listed := listed_models()):
+            print(f"  OK    {value}  (listed by OpenCode, not on models.dev: a plugin or custom provider)")
         else:
             bad = 1
             stem = "-".join(model.split("-")[:2])

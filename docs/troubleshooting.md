@@ -22,9 +22,11 @@
 
 **`opencode debug agents` lists nothing, or only built-in agents.** A cold 2.x service needs about a second (and the team config) before the team's agents appear. `setup.sh` retries until `tech-lead` shows up; by hand, run it again, or `opencode reload`.
 
+**Switching between OpenCode 2.x and 1.x.** `OPENCODE_MAJOR=1 bash setup.sh` installs 1.x over 2.x (and plain `bash setup.sh` goes back). The two versions keep incompatible session databases: 1.x stops with `Database is not empty and has no session table`. Move the 2.x database aside (nothing is deleted): `mkdir -p ~/.local/share/opencode/v2-backup && mv ~/.local/share/opencode/opencode.db* ~/.local/share/opencode/v2-backup/`. Move it back when you return to 2.x. Stop the 2.x background service first (`opencode service stop`).
+
 ## Config
 
-**You had your own config.** It is backed up to `~/.config/opencode.backup-<timestamp>` first (every run makes a new backup). The script warns when the old config had `provider`, `mcp`, `plugin` or `keybinds` sections, or an `opencode.jsonc`, or a global `AGENTS.md` that is not the team's own; copy back what you still need.
+**You had your own config.** It is backed up to `~/.config/opencode.backup-<timestamp>` first (every run makes a new backup). The script warns when the old `opencode.json` had `provider`, `mcp`, `plugin` or `keybinds` sections (the team's `opencode.json` replaces it) or a global `AGENTS.md` that is not the team's own; copy back what you still need. **Put your own settings (plugins, providers, MCP servers, keybinds) in `~/.config/opencode/opencode.jsonc`**: setup never overwrites that file and OpenCode layers it over the team's `opencode.json`. (On 2.x the keys are plural: `plugins`, `providers`.)
 
 **OpenCode 2.x rejects the config.** The script then installs the same configuration in V1 format (2.x normalizes it) and says so in `setup.log`; the rejected file is saved as `opencode.v2.rejected.json` in the clone. If you can, open an issue with the `opencode debug config` output.
 

@@ -67,7 +67,7 @@ The **interactive picker** lists the roles, asks for a number, then for a model:
 
 Options: `--dir` (OpenCode config folder; default `${XDG_CONFIG_HOME:-~/.config}/opencode`), `--conf` (the `models.conf` to use), `--quiet` (for `apply`). It needs `python3` 3.8 or newer and nothing else (standard library only). On a Mac without developer tools run `xcode-select --install`.
 
-`check` answers `OK` or `FAIL` per distinct model ID and lists close matches. If models.dev cannot be reached it says so and exits 2 (a network problem is not a config error).
+`check` answers `OK` or `FAIL` per distinct model ID and lists close matches. An ID that models.dev does not know is still `OK` if `opencode models` lists it (models added by a plugin or a custom provider). If models.dev cannot be reached it says so and exits 2 (a network problem is not a config error).
 
 ## Defaults and where your choices live
 

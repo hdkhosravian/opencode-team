@@ -24,7 +24,9 @@ On macOS you can double-click `setup.command` instead; it runs the same script a
 | `XDG_CONFIG_HOME` | Where the config goes: `$XDG_CONFIG_HOME/opencode`, default `~/.config/opencode`. |
 | `SETUP_PAUSE=1` | Wait for Enter at the end (what `setup.command` sets). |
 
-The script is safe to run again: it is how you **update** the team. Run `git pull` in the clone, then `bash setup.sh`.
+The script is safe to run again: it is how you **update** the team. Run `git pull` in the clone, then `bash setup.sh`. It is also how you switch between OpenCode 1.x and 2.x (`OPENCODE_MAJOR=1` or not); see the session-database note in [troubleshooting.md](troubleshooting.md#install).
+
+Your own OpenCode settings (plugins, providers, MCP servers) go in `~/.config/opencode/opencode.jsonc`, which `setup.sh` never overwrites; the team's `opencode.json` is replaced on every run.
 
 ### What it does
 

@@ -95,11 +95,12 @@ if [ -e "$CFG" ]; then
   BK="$CFG.backup-$(date +%Y%m%d-%H%M%S)"
   cp -RL "$CFG" "$BK" && ok "backed up existing config to $BK"
   for k in provider mcp plugin keybinds; do
-    if grep -q "\"$k" "$BK/opencode.json" "$BK/opencode.jsonc" 2>/dev/null; then
+    # only opencode.json is replaced by the team's; opencode.jsonc stays where it is, so it needs no warning
+    if grep -q "\"$k" "$BK/opencode.json" 2>/dev/null; then
       warn "your old config had a \"$k\" section; copy it back from $BK into $CFG/opencode.json"
     fi
   done
-  [ -e "$CFG/opencode.jsonc" ] && warn "you have $CFG/opencode.jsonc; OpenCode reads it together with the team's opencode.json, so check there are no conflicting settings"
+  [ -e "$CFG/opencode.jsonc" ] && echo "  INFO  $CFG/opencode.jsonc is yours: setup never overwrites it, and OpenCode layers it over the team's opencode.json (plugins and providers belong there; also check it has no conflicting settings)"
   # only a global AGENTS.md that is not the team's own (it starts with "# Team rules") is worth a warning
   [ -e "$CFG/AGENTS.md" ] && ! head -1 "$CFG/AGENTS.md" | grep -q '^# Team rules' && warn "your own global AGENTS.md was replaced by the team rules; your version is in $BK/AGENTS.md (merge any lines you still want)"
 fi
@@ -197,7 +198,14 @@ if [ "$MAJ" = "2" ]; then
   grep -E '"(id|providerID|variant)"' "$TMP/agents.out" | head -40 | sed 's/^/     /'
   ( tlimit 30 opencode debug config 2>&1 | grep -E '"(type|path)"' | head -10 ) | sed 's/^/     /'
 else
-  tlimit 30 opencode debug config >/dev/null 2>&1 && echo "  OK    config resolves" || warn "config does not resolve (run: opencode debug config)"
+  # the first run after a plugin was added installs it from npm, which can take a while: allow a second try
+  if tlimit 60 opencode debug config > "$TMP/config1.out" 2>&1 || { sleep 2; tlimit 60 opencode debug config > "$TMP/config1.out" 2>&1; }; then
+    echo "  OK    config resolves"
+  elif grep -q "has no session table" "$TMP/config1.out"; then
+    warn "OpenCode 1.x cannot use the session database of OpenCode 2.x. Move it aside (nothing is deleted): mkdir -p ~/.local/share/opencode/v2-backup && mv ~/.local/share/opencode/opencode.db* ~/.local/share/opencode/v2-backup/"
+  else
+    warn "config does not resolve (run: opencode debug config)"
+  fi
   mkdir -p "$TMP/agents1"
   for a in lead tech-lead developer developer-strong reviewer explore general reporter; do
     if tlimit 30 opencode debug agent "$a" > "$TMP/agents1/$a.json" 2>&1; then
